@@ -26,6 +26,8 @@ class Loop:
         self._pending_calls = []
         self._calllaterfunc = lambda x: None
         self._scheduled_update = False
+        self._pending_actions = []
+        self._pending_reactions = []
     
     def call_later(self, func):
         """ Call the given function in the next iteration of the event loop.
@@ -45,6 +47,16 @@ class Loop:
                 func()
             except Exception as err:
                 logger.exception(err)
+        
+        while self._pending_actions:
+            ob, func, args = self._pending_actions.pop(0)
+            try:
+                func(ob, *args)
+            except Exception as err:
+                logger.exception(err)
+    
+    def add_action(self, ob, func, args):
+        self._pending_actions.append((ob, func, args))
     
     def __enter__(self):
         return self

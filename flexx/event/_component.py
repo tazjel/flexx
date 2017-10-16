@@ -152,8 +152,13 @@ class Component(with_metaclass(ComponentMeta, object)):
     """
     
     _IS_COMPONENT = True
-    
+    _count = 0
+     
     def __init__(self, **property_values):
+        
+        # todo: perhaps use the mechanis that Model uses to make an id?
+        Component._count += 1
+        self._id = 'c%i' % Component._count  # to ensure a consistent event order
         
         # Init some internal variables. Note that __reactions__ is a list of
         # reaction names for this class, and __handlers a dict of reactions
@@ -210,8 +215,11 @@ class Component(with_metaclass(ComponentMeta, object)):
     
     def __init_handlers(self):
         # Instantiate handlers (i.e. resolve connections) its enough to reference them
+        # the new_value attribute in the event is to trigger a reconnect
         for name in self.__reactions__:
-            getattr(self, name)
+            reaction = getattr(self, name)
+            if not reaction.is_explicit():
+                loop.add_reaction_event(reaction, 'init', Dict(source=self, type='', new_value=()))
     
     if sys.version_info > (3, 4):
         # http://eli.thegreenplace.net/2009/06/12/safely-using-destructors-in-python
@@ -272,7 +280,8 @@ class Component(with_metaclass(ComponentMeta, object)):
         if self.__pending_events is not None:
             if not label.startswith('reconnect_'):
                 for ev in self.__pending_events.get(type, []):
-                    handler._add_pending_event(label, ev)
+                    #handler._add_pending_event(label, ev)
+                    loop.add_reaction_event(handler, label, ev)
         # Send an event to communicate the value of a property
         # if type in self.__properties__:
         #     if self.__props_ever_set.get(type, False):
@@ -333,7 +342,10 @@ class Component(with_metaclass(ComponentMeta, object)):
     
     def _emit(self, ev):
         for label, handler in self.__handlers.get(ev.type, ()):
-            handler._add_pending_event(label, ev)  # friend class
+            # handler._add_pending_event(label, ev)  # friend class
+            ev2 = ev.copy()  # todo: there's also a copy above, limit to 1
+            ev2.label = label
+            loop.add_reaction_event(handler, label, ev2)
     
     
     def _mutate(self, prop_name, value, kind='set', index=-1):

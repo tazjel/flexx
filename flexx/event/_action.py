@@ -132,4 +132,4 @@ class Action:
         ob = self._ob1()
         
         if ob is not None:
-            loop.add_action(ob, func, args)  # todo: or add_action(self, args)?
+            loop.add_action_invokation(ob, func, args)  # todo: or add_action(self, args)?

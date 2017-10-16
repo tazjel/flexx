@@ -4,6 +4,7 @@ Implements the property decorator, class and desciptor.
 
 import inspect
 
+from ._loop import loop
 from ._action import BaseDescriptor
 
 
@@ -87,4 +88,5 @@ class PropertyDescriptor(BaseDescriptor):
         if instance is None:
             return self
         private_name = '_' + self._name + '_value'
+        loop.register_prop_access(instance, self._name)
         return getattr(instance, private_name)

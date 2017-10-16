@@ -15,13 +15,13 @@ class Name(event.Component):
     # def first_name(self, n='John'):
     #     return str(n)
     
-    @event.reaction('first_name', 'last_name')
+    @event.reaction('first_name:xx', 'last_name')
     def greet1(self, *events):
         print('Hello %s %s' % (self.first_name, self.last_name))
     
-    #@event.react
+    @event.reaction
     def greet2(self):
-        print('Hello %s %s' % (self.first_name, self.last_name))
+        print('Hello autoreact %s %s' % (self.first_name, self.last_name))
     
     count = event.prop(0, 'The count so far')
     
@@ -34,7 +34,26 @@ class Name(event.Component):
         self._mutate('count', v)
 
 
+class Name2(event.Component):
+    
+    first_name = event.prop('John', setter=str)
+    subs = event.prop([])
+    
+    @event.action
+    def append(self, sub):
+        self._set_subs(self.subs + [sub])
+    
+    @event.reaction
+    def greetall1(self):
+        print('hi ' + ', '.join(n.first_name for n in self.subs) + '!')
+    
+    @event.reaction('subs*.first_name')
+    def greetall2(self, *events):
+        print('hai ' + ', '.join(n.first_name for n in self.subs) + '!')
+
+
 name = Name()
+name2 = Name2()
 
 # Connect a function using a decorator
 @name.reaction('first_name', 'last_name')

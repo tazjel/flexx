@@ -49,15 +49,18 @@ def reaction(*connection_strings):
             def greet(self, *events):
                 print('hello %s %s' % (self.first_name, self.last_name))
     """
-    if (not connection_strings) or (len(connection_strings) == 1 and
-                                    callable(connection_strings[0])):
-        raise RuntimeError('Connect decorator needs one or more event strings.')
-
+    if (not connection_strings):
+        raise RuntimeError('reaction() needs one or more arguments.')
+    
+    # Extract function if we can
     func = None
     if callable(connection_strings[0]):
         func = connection_strings[0]
         connection_strings = connection_strings[1:]
-
+    elif callable(connection_strings[-1]):
+        func = connection_strings[-1]
+        connection_strings = connection_strings[:-1]
+    
     for s in connection_strings:
         if not (isinstance(s, str) and len(s) > 0):
             raise ValueError('Connection string must be nonempty strings.')
@@ -124,7 +127,7 @@ class Reaction:
 
     def __init__(self, ob, func, connection_strings):
         Reaction._count += 1
-        self._id = 'h%i' % Reaction._count  # to ensure a consistent event order
+        self._id = 'r%i' % Reaction._count  # to ensure a consistent event order
 
         # Store objects using a weakref.
         # - ob1 is the Component object of which the connect() method was called
@@ -210,7 +213,10 @@ class Reaction:
         # Pending events for this reaction
         self._scheduled_update = False
         self._pending = []  # pending events
-
+        
+        # Implicit connections
+        self._implicit_connections = []  # list of (component, type) tuples
+        
         # Connect
         for index in range(len(self._connections)):
             self._connect_to_event(index)
@@ -219,7 +225,13 @@ class Reaction:
         c = '+'.join([str(len(c.objects)) for c in self._connections])
         cname = self.__class__.__name__
         return '<%s %r with %s connections at 0x%x>' % (cname, self._name, c, id(self))
-
+    
+    def is_explicit(self):
+        """ Whether this reaction is explicit (has connection strings),
+        or implicit (auto-connects to used properties).
+        """
+        return len(self._connections) > 0
+    
     def get_name(self):
         """ Get the name of this reaction, usually corresponding to the name
         of the function that this reaction wraps.
@@ -256,23 +268,23 @@ class Reaction:
         self._func_once = self._func
         return res
 
-    def _add_pending_event(self, label, ev):
-        """ Add an event object to be handled at the next event loop
-        iteration. Called from Component.emit().
-        """
-        if not self._scheduled_update:
-            # register only once
-            self._scheduled_update = True
-            if this_is_js():
-                #setTimeout(self._handle_now_callback.bind(self), 0)
-                loop.call_later(self._handle_now_callback.bind(self))
-            else:
-                loop.call_later(self._handle_now_callback)
-        self._pending.append((label, ev))
+    # def _add_pending_event(self, label, ev):
+    #     """ Add an event object to be handled at the next event loop
+    #     iteration. Called from Component.emit().
+    #     """
+    #     if not self._scheduled_update:
+    #         # register only once
+    #         self._scheduled_update = True
+    #         if this_is_js():
+    #             #setTimeout(self._handle_now_callback.bind(self), 0)
+    #             loop.call_later(self._handle_now_callback.bind(self))
+    #         else:
+    #             loop.call_later(self._handle_now_callback)
+    #     self._pending.append((label, ev))
 
-    def _handle_now_callback(self):
-        self._scheduled_update = False
-        self.handle_now()
+    # def _handle_now_callback(self):
+    #     self._scheduled_update = False
+    #     self.handle_now()
 
     def handle_now(self):
         """ Invoke a call to the reaction function with all pending
@@ -335,7 +347,34 @@ class Reaction:
         self._connections = []
         while len(self._pending):
             self._pending.pop()  # no list.clear on legacy py
-
+    
+    def filter_events(self, events):
+        # Filter
+        filtered_events = []
+        reconnect = {}  # poor man's set
+        for ev in events:
+            if ev.label.startswith('reconnect_'):
+                index = int(ev.label.split('_')[-1])
+                reconnect[index] = index
+            else:
+                filtered_events.append(ev)
+        # Reconnect
+        for index in reconnect:
+            self._connect_to_event(index)
+        # Return shorter list
+        return events
+    
+    def update_implicit_connections(self, connections):
+        """ Update the list of implicit connections.
+        """
+        # Init - each connection is a (component, type) tuple
+        old_conns = self._implicit_connections
+        new_conns = connections
+        self._implicit_connections = new_conns
+        
+        # Reconnect in a smart way
+        self._connect_and_disconnect(old_conns, new_conns)
+    
     def _clear_component_refs(self, ob):
         """ Clear all references to the given Component instance. This is
         called from a Component' dispose() method. This reaction remains
@@ -369,8 +408,14 @@ class Reaction:
         if not new_objects:
             raise RuntimeError('Could not connect to %r' % connection.fullname)
         
-        # Connect and disconnect
-        
+        # Reconnect in a smart way
+        self._connect_and_disconnect(old_objects, new_objects, connection.force)
+    
+    def _connect_and_disconnect(self, old_objects, new_objects, force=False):    
+        """ Update connections by disconnecting old and connecting new,
+        but try to keep connections that do not change.
+        """
+    
         # Skip common objects from the start
         i1 = 0
         while (i1 < len(new_objects) and i1 < len(old_objects) and
@@ -389,7 +434,7 @@ class Reaction:
             ob.disconnect(type, self)
         # Connect remaining new
         for ob, type in new_objects[i1:i2+1]:
-            ob._register_reaction(type, self, connection.force)
+            ob._register_reaction(type, self, force)
 
     def _seek_event_object(self, index, path, ob):
         """ Seek an event object based on the name (PyScript compatible).

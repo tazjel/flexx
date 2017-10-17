@@ -1,71 +1,59 @@
 """
-This example implements a simple class to hold a persons name, and three
-ways to connect a function that will be print a greet when the name is
-changed.
+This example implements a simple class to hold a persons name, and different
+ways to print a greeting in reaction to name changes. This example is best
+run interactively.
 """
 
 from flexx import event
 
-class Name(event.Component):
+class Person(event.Component):
     
-    first_name = event.prop('John', setter=str)
+    first_name = event.prop('Jane', setter=str)
     last_name = event.prop('Doe', setter=str)
+    children = event.prop([], 'The children of this person')
     
-    # @event.prop
-    # def first_name(self, n='John'):
-    #     return str(n)
+    # Actions 
+    
+    @event.action
+    def add_child(self, child):
+        self._set_children(self.children + [child])
+    
+    # Reactions
     
     @event.reaction('first_name:xx', 'last_name')
-    def greet1(self, *events):
-        print('Hello %s %s' % (self.first_name, self.last_name))
+    def greet_explitic(self, *events):
+        print('Explicit hello %s %s' % (self.first_name, self.last_name))
     
     @event.reaction
-    def greet2(self):
-        print('Hello autoreact %s %s' % (self.first_name, self.last_name))
+    def greet_implicit(self):
+        print('Implicit hello %s %s' % (self.first_name, self.last_name))
     
-    count = event.prop(0, 'The count so far')
-    
-    @event.action
-    def add(self):
-        self._set_count(self.count + 1)
-    
-    @event.action
-    def reset(self, v=0):
-        self._mutate('count', v)
-
-
-class Name2(event.Component):
-    
-    first_name = event.prop('John', setter=str)
-    subs = event.prop([])
-    
-    @event.action
-    def append(self, sub):
-        self._set_subs(self.subs + [sub])
+    @event.reaction('children*.first_name')
+    def greetall_explicit(self, *events):
+        print('Explicit hey kids ' + ', '.join(n.first_name for n in self.children) + '!')
     
     @event.reaction
-    def greetall1(self):
-        print('hi ' + ', '.join(n.first_name for n in self.subs) + '!')
-    
-    @event.reaction('subs*.first_name')
-    def greetall2(self, *events):
-        print('hai ' + ', '.join(n.first_name for n in self.subs) + '!')
+    def greetall_implicit(self):
+        print('Implicit hey kids ' + ', '.join(n.first_name for n in self.children) + '!')
 
 
-name = Name()
-name2 = Name2()
+p1 = Person()
+p2 = Person(first_name='Bob')
+p3 = Person(first_name='Naomi')
+p4 = Person(first_name='Ivo')
 
-# Connect a function using a decorator
-@name.reaction('first_name', 'last_name')
-def greet2(*events):
-    print('Hi %s %s' % (name.first_name, name.last_name))
+p1.add_child(p3)
+p1.add_child(p4)
 
-# Connect a function using the classic approach
-def greet3(*events):
-    print('Heya %s %s' % (name.first_name, name.last_name))
-name.reaction(greet3, 'first_name', 'last_name')
+# These also work ...
 
-
-# name.first_name = 'Jane'
+# @name.reaction('first_name', 'last_name')
+# def greet_explicit2(*events):
+#     print('Hi %s %s' % (name.first_name, name.last_name))
+# 
+# # Connect a function using the classic approach
+# def greet_explicit3(*events):
+#     print('Heya %s %s' % (name.first_name, name.last_name))
+# name.reaction(greet_explicit3, 'first_name', 'last_name')
 
 event.loop.iter()

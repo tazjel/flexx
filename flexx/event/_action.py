@@ -132,4 +132,10 @@ class Action:
         ob = self._ob1()
         
         if ob is not None:
-            loop.add_action_invokation(ob, func, args)  # todo: or add_action(self, args)?
+            # Call action directly or async
+            if loop.is_processing_actions():
+                func(ob, *args)
+            else:
+                loop.add_action_invokation(ob, func, args)  # todo: or add_action(self, args)?
+        
+        return None  # 'Actions are invoked asynchronous'

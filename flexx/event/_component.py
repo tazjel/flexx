@@ -359,6 +359,9 @@ class Component(with_metaclass(ComponentMeta, object)):
             cname = self.__class__.__name__
             raise AttributeError('%s object has no property %r' % (cname, prop_name))
         
+        if not loop.is_processing_actions():
+            raise RuntimeError('Trying to mutate a property outside of an action.')
+        
         # todo: still needed?
         # prop_being_set = self.__props_being_set.get(prop_name, None)
         # if prop_being_set:

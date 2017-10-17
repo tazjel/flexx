@@ -67,9 +67,9 @@ def reaction(*connection_strings):
 
     def _connect(func):
         if not callable(func):
-            raise TypeError('connect() decorator requires a callable.')
+            raise TypeError('reaction() decorator requires a callable.')
         if not looks_like_method(func):
-            raise TypeError('connect() decorator requires a method '
+            raise TypeError('reaction() decorator requires a method '
                             '(first arg must be self).')
         return ReactionDescriptor(func, connection_strings)
 
@@ -254,7 +254,6 @@ class Reaction:
     def __call__(self, *events):
         """ Call the reaction function.
         """
-        # todo: restrict to when reactions are being handled? or perhaps that is too limiting for testing/debugging
         func = self._func_once
         self._func_once = self._func
         if self._ob2 is not None:

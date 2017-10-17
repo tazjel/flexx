@@ -75,11 +75,11 @@ class Loop:
             self._pending_calls.append(func)
             self._schedule_iter()
     
-    def add_action_invokation(self, ob, func, args):
+    def add_action_invokation(self, action, args):
         """ Schedule the handling of an action.
         """
         with self._lock:
-            self._pending_actions.append((ob, func, args))
+            self._pending_actions.append((action, args))
             self._schedule_iter()
     
     def add_reaction_event(self, reaction, label, ev):
@@ -135,7 +135,7 @@ class Loop:
                 is_container = isinstance(ev.get('new_value', None), (tuple, list))
                 self._pending_reaction_ids[reaction._id] = is_container
             
-            # self._schedule_iter() -> no need
+            self._schedule_iter()
     
     def register_prop_access(self, component, prop_name):
         """ Register access of a property, to keep track of implicit reactions.
@@ -206,10 +206,10 @@ class Loop:
         
         # Process
         for i in range(len(pending_actions)):
-            ob, func, args = pending_actions[i]
+            action, args = pending_actions[i]
             self._processing_actions = True
             try:
-                func(ob, *args)
+                action(*args)
             except Exception as err:
                 logger.exception(err)
             finally:
@@ -231,7 +231,7 @@ class Loop:
             reaction, _, events = pending_reactions[i]
             # Reconnect explicit reaction
             if reaction.is_explicit():
-                events = reaction.filter_events(events)
+                events = reaction._filter_events(events)
             # Call reaction
             if len(events) > 0 or not reaction.is_explicit():
                 self._prop_access = {}
@@ -249,7 +249,7 @@ class Loop:
                     for component, names in self._prop_access.values():
                         for name in names:
                             connections.append((component, name))
-                    reaction.update_implicit_connections(connections)
+                    reaction._update_implicit_connections(connections)
             finally:
                 self._prop_access = {}
     

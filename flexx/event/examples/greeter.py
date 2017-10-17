@@ -18,6 +18,11 @@ class Person(event.Component):
     def add_child(self, child):
         self._set_children(self.children + [child])
     
+    @event.emitter
+    def eat(self):
+        #self.emit('eat', {'name': self.first_name})
+        return {'name': self.first_name}
+    
     # Reactions
     
     @event.reaction('first_name:xx', 'last_name')
@@ -35,6 +40,11 @@ class Person(event.Component):
     @event.reaction
     def greetall_implicit(self):
         print('Implicit hey kids ' + ', '.join(n.first_name for n in self.children) + '!')
+    
+    @event.reaction('!eat')
+    def track_eating(self, *events):
+        for ev in events:
+            print(ev.name + ' is eating')
 
 
 p1 = Person()

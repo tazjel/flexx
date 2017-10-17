@@ -256,6 +256,7 @@ class Reaction:
         """
         # todo: restrict to when reactions are being handled? or perhaps that is too limiting for testing/debugging
         func = self._func_once
+        self._func_once = self._func
         if self._ob2 is not None:
             if self._ob2() is not None:
                 res = func(self._ob2(), *events)
@@ -265,71 +266,7 @@ class Reaction:
                 return
         else:
             res = func(*events)
-        self._func_once = self._func
         return res
-
-    # def _add_pending_event(self, label, ev):
-    #     """ Add an event object to be handled at the next event loop
-    #     iteration. Called from Component.emit().
-    #     """
-    #     if not self._scheduled_update:
-    #         # register only once
-    #         self._scheduled_update = True
-    #         if this_is_js():
-    #             #setTimeout(self._handle_now_callback.bind(self), 0)
-    #             loop.call_later(self._handle_now_callback.bind(self))
-    #         else:
-    #             loop.call_later(self._handle_now_callback)
-    #     self._pending.append((label, ev))
-
-    # def _handle_now_callback(self):
-    #     self._scheduled_update = False
-    #     self.handle_now()
-
-    def handle_now(self):
-        """ Invoke a call to the reaction function with all pending
-        events. This is normally called in a next event loop iteration
-        when an event is scheduled for this reaction, but it can also
-        be called manually to force the reaction to process pending
-        events *now*.
-        """
-        # Collect pending events and clear current list
-        events, reconnect = self._collect()
-        self._pending = []
-        # Reconnect (dynamism)
-        for index in reconnect:
-            self._connect_to_event(index)
-        # Collect newly created events (corresponding to props)
-        events2, reconnect2 = self._collect()
-        if not len(reconnect2):
-            events = events + events2
-            self._pending = []
-        # Handle events
-        if len(events):
-            if not this_is_js():
-                logger.debug('Reaction %s is processing %i events' %
-                            (self._name, len(events)))
-            try:
-                self(*events)
-            except Exception as err:
-                if this_is_js():
-                    console.error(err)
-                else:
-                    err.skip_tb = 2
-                    logger.exception(err)
-
-    def _collect(self):
-        """ Get list of events and reconnect-events from list of pending events.
-        """
-        events = []
-        reconnect = {}  # poor man's set
-        for label, ev in self._pending:
-            if label.startswith('reconnect_'):
-                index = int(label.split('_')[-1])
-                reconnect[index] = index
-            else:
-                events.append(ev)
-        return events, tuple(reconnect)
 
     ## Connecting
 
@@ -348,7 +285,10 @@ class Reaction:
         while len(self._pending):
             self._pending.pop()  # no list.clear on legacy py
     
-    def filter_events(self, events):
+    def _filter_events(self, events):
+        """ Filter events, taking out the events for reconnections.
+        Used by the loop.
+        """
         # Filter
         filtered_events = []
         reconnect = {}  # poor man's set
@@ -364,8 +304,8 @@ class Reaction:
         # Return shorter list
         return events
     
-    def update_implicit_connections(self, connections):
-        """ Update the list of implicit connections.
+    def _update_implicit_connections(self, connections):
+        """ Update the list of implicit connections. Used by the loop.
         """
         # Init - each connection is a (component, type) tuple
         old_conns = self._implicit_connections

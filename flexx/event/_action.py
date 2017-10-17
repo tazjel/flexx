@@ -5,6 +5,7 @@ Implements the action decorator, class and desciptor.
 import weakref
 
 from ._loop import loop
+from . import logger
 
 
 def action(func):
@@ -99,14 +100,8 @@ class Action:
     queueing action invokations rather than calling the function directly.
     """
     
-    _count = 0
-
     def __init__(self, ob, func, name, doc):
         assert callable(func)
-        
-        # todo: I think we can remove _id
-        Action._count += 1
-        self._id = 'a%i' % Action._count  # to ensure a consistent event order
         
         # Store func, name, and docstring (e.g. for sphinx docs)
         self._ob1 = weakref.ref(ob)
@@ -127,15 +122,15 @@ class Action:
     def __call__(self, *args):
         """ Invoke the action.
         """
-        func = self._func_once
-        self._func_once = self._func
-        ob = self._ob1()
+        if loop.is_processing_actions():
+            func = self._func_once
+            self._func_once = self._func
+            ob = self._ob1()
+            if ob is not None:
+                res = func(ob, *args)
+                if res is not None:
+                    logger.warn('Action (%s) is not supposed to return a value' % self._name)
+        else:
+            loop.add_action_invokation(self, args)
         
-        if ob is not None:
-            # Call action directly or async
-            if loop.is_processing_actions():
-                func(ob, *args)
-            else:
-                loop.add_action_invokation(ob, func, args)  # todo: or add_action(self, args)?
-        
-        return None  # 'Actions are invoked asynchronous'
+        return None  # 'Actions are invoked asynchronously'

@@ -71,9 +71,9 @@ def finalize_component_class(cls):
     actions and reactions.
     """
     actions = {}
-    reactions = {}
+    emitters = {}
     properties = {}
-    emitters = {}  # todo: metitters == actions?
+    reactions = {}
     
     for name in dir(cls):
         if name.startswith('__'):
@@ -100,9 +100,9 @@ def finalize_component_class(cls):
     
     # Cache prop names
     cls.__actions__ = [name for name in sorted(actions.keys())]
-    cls.__reactions__ = [name for name in sorted(reactions.keys())]
-    cls.__properties__ = [name for name in sorted(properties.keys())]
     cls.__emitters__ = [name for name in sorted(emitters.keys())]
+    cls.__properties__ = [name for name in sorted(properties.keys())]
+    cls.__reactions__ = [name for name in sorted(reactions.keys())]
     return cls
 
 

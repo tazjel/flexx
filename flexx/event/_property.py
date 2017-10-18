@@ -38,38 +38,10 @@ def prop(default, doc='', setter=None):
     return PropertyDescriptor(default, setter, doc)
 
 
-# todo: arrayprop or listprop?
-
-
-def arrayprop(default, setter=None, doc=None):
-    """ Function to define an array property on a Component.
-    
-    Array properties are different from normal properties in that ...
-    """
-
-
 def readonly(func):
-    """ Decorator to define a readonly property. An event is emitted
-    when the property is set, which has values for "old_value" and
-    "new_value". To set a readonly property internally, use the
-    :func:`Component._set_prop() <flexx.event.Component._set_prop>` method.
-    
-    .. code-block:: python
-    
-        class MyObject(event.Component):
-           
-           @readonly
-           def bar(self, v=1):
-                return float(v)
-        
-        m = MyObject()
-        m._set_prop('bar', 2)  # only for internal use
-    
+    """ Deprecated.
     """
     raise NotImplementedError('Deprecated: use event.prop() instead.')
-    # if not callable(func):
-    #     raise TypeError('readonly decorator needs a callable')
-    # return Readonly(func)
 
 
 class PropertyDescriptor(BaseDescriptor):

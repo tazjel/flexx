@@ -33,13 +33,19 @@ def prop(default, doc='', setter=None):
         raise TypeError('event.prop() is not a decorator (anymore).')
     if not isinstance(doc, str):
         raise TypeError('event.prop() doc must be a string.')
-    if not (setter is None or callable(setter)):
-        raise TypeError('event.prop() setter must be None or callable.')
+    if not (setter is None or setter is True or callable(setter)):
+        raise TypeError('event.prop() setter must be None, True, or callable.')
     return PropertyDescriptor(default, setter, doc)
 
 
+# todo: arrayprop or listprop?
+
+
 def arrayprop(default, setter=None, doc=None):
-    raise NotImplementedError()
+    """ Function to define an array property on a Component.
+    
+    Array properties are different from normal properties in that ...
+    """
 
 
 def readonly(func):

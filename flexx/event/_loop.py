@@ -93,6 +93,12 @@ class Loop:
         # _pending_reactions is a list of tuples (reaction, representing event, events)
         # _pending_reaction_ids maps reaction._id -> whether a container prop changed
         
+        # Allow reaction to discard the event (or rather, consume it by reconnecting)
+        # It is important to do the reconnecting before a new event occurs that
+        # the reaction might be subscribed to after the reconnect.
+        if reaction._filter_event(ev):
+            return
+        
         with self._lock:
             self._ensure_thread_match()
             
@@ -239,9 +245,6 @@ class Loop:
         # Process
         for i in range(len(pending_reactions)):
             reaction, _, events = pending_reactions[i]
-            # Reconnect explicit reaction
-            if reaction.is_explicit():
-                events = reaction._filter_events(events)
             # Call reaction
             if len(events) > 0 or not reaction.is_explicit():
                 self._prop_access = {}
@@ -260,6 +263,8 @@ class Loop:
                         for name in names:
                             connections.append((component, name))
                     reaction._update_implicit_connections(connections)
+            except Exception as err:
+                logger.exception(err)
             finally:
                 self._prop_access = {}
     

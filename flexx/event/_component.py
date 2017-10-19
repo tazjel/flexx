@@ -44,8 +44,8 @@ def new_type(name, *args, **kwargs):
 class ComponentMeta(type):
     """ Meta class for Component
     * Set the name of property desciptors.
-    * Sets __actions__, __reactions__ and __properties__ attribute on the class.
-    * Create some private functions (e.g. mutator functions).
+    * Set __actions__, __reactions__, __emitters__ and __properties__ class attributes.
+    * Create private methods (e.g. mutator functions and prop validators).
     """
     
     def __init__(cls, name, bases, dct):
@@ -57,9 +57,20 @@ class ComponentMeta(type):
 def finalize_component_class(cls):
     """ Given a class, analyse its Properties, Actions and Reactions,
     to set a list of __actions__, __properties__, and __reactions__.
-    Also create private methods corresponding to the properties,
-    actions and reactions.
+    
+    For actions, reactions and emitters, there's nothing more to do. For
+    properties there is though:
+    
+    * Create a mutator function for convenience.
+    * If needed, create a corresponding set_xx action.
+    * Create validator function.
+    
+    The instances also set up a few things:
+    
+    * Initialize property values (at `self._xx_value`).
+    * Initialize (connect) reactions.
     """
+    
     actions = {}
     emitters = {}
     properties = {}
@@ -74,13 +85,17 @@ def finalize_component_class(cls):
         elif isinstance(val, Property):
             properties[name] = val
             val._set_name(name)  # noqa
-            # Mutator function
-            setattr(cls, '_mutate_' + name, val.make_mutator())
-            # auto-setter?
-            if val._settable:
-                setattr(cls, 'set_' + name, ActionDescriptor(val.make_set_action(), 'set_' + name, 'Setter for %s.' % name))
-            # validator
+            # Create validator method
             setattr(cls, '_' + name + '_validate', val._validate)
+            # Create mutator method
+            setattr(cls, '_mutate_' + name, val.make_mutator())
+            # Create setter action?
+            if val._settable:
+                action_name = 'set_' + name
+                action_des = ActionDescriptor(val.make_set_action(), action_name,
+                                              'Setter for %s.' % name)
+                setattr(cls, action_name, action_des)
+                actions[action_name] = action_des
         elif isinstance(val, ReactionDescriptor):
             reactions[name] = val
         elif isinstance(val, Emitter):

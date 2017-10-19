@@ -199,8 +199,6 @@ class Component(with_metaclass(ComponentMeta, object)):
                     setter_reaction = lambda: setter_func(value())
                     ev = Dict(source=self, type='', label='')
                     loop.add_reaction_event(Reaction(self, setter_reaction, []), ev)
-                                            
-                    
                 else:
                     setter_func(value)
             else:
@@ -222,9 +220,9 @@ class Component(with_metaclass(ComponentMeta, object)):
             self.__pending_events = None
         loop.call_later(stop_capturing)
         # Call Python or JS version to initialize and connect the handlers
-        self.__init_handlers()
+        self._init_handlers2()
     
-    def __init_handlers(self):
+    def _init_handlers2(self):
         # Instantiate handlers (i.e. resolve connections) its enough to reference them
         # the new_value attribute in the event is to trigger a reconnect.
         # Force implicit reactions to connect.
@@ -439,57 +437,57 @@ class Component(with_metaclass(ComponentMeta, object)):
             return True
     
     # todo: clean up
-    def _sett_prop(self, prop_name, value, _initial=False):
-        """ Set the value of a (readonly) property.
-        
-        Parameters:
-            prop_name (str): the name of the property to set.
-            value: the value to set.
-        """
-        # Checks
-        if not isinstance(prop_name, str):
-            raise TypeError("_set_prop's first arg must be str, not %s" %
-                             prop_name.__class__)
-        if prop_name not in self.__properties__:
-            cname = self.__class__.__name__
-            raise AttributeError('%s object has no property %r' % (cname, prop_name))
-        prop_being_set = self.__props_being_set.get(prop_name, None)
-        if prop_being_set:
-            return
-        # Prepare
-        private_name = '_' + prop_name + '_value'
-        func_name = '_' + prop_name + '_func'  # set in init in both Py and JS
-        # Validate value
-        self.__props_being_set[prop_name] = True
-        self.__props_ever_set[prop_name] = True
-        func = getattr(self, func_name)
-        try:
-            if this_is_js():
-                value2 = func.apply(self, [value])
-            elif getattr(self.__class__, prop_name)._has_self:
-                value2 = func(self, value)
-            else:
-                value2 = func(value)
-        finally:
-            self.__props_being_set[prop_name] = False
-        # If not initialized yet, set
-        if prop_being_set is None:
-            setattr(self, private_name, value2)
-            self.emit(prop_name, dict(new_value=value2, old_value=value2))
-            return True
-        # Otherwise only set if value has changed
-        old = getattr(self, private_name)
-        if this_is_js():
-            is_equal = old == value2
-        elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):
-            import numpy as np
-            is_equal = np.array_equal(old, value2)
-        else:
-            is_equal = type(old) == type(value2) and old == value2
-        if not is_equal:
-            setattr(self, private_name, value2)
-            self.emit(prop_name, dict(new_value=value2, old_value=old))
-            return True
+    # def _sett_prop(self, prop_name, value, _initial=False):
+    #     """ Set the value of a (readonly) property.
+    #     
+    #     Parameters:
+    #         prop_name (str): the name of the property to set.
+    #         value: the value to set.
+    #     """
+    #     # Checks
+    #     if not isinstance(prop_name, str):
+    #         raise TypeError("_set_prop's first arg must be str, not %s" %
+    #                          prop_name.__class__)
+    #     if prop_name not in self.__properties__:
+    #         cname = self.__class__.__name__
+    #         raise AttributeError('%s object has no property %r' % (cname, prop_name))
+    #     prop_being_set = self.__props_being_set.get(prop_name, None)
+    #     if prop_being_set:
+    #         return
+    #     # Prepare
+    #     private_name = '_' + prop_name + '_value'
+    #     func_name = '_' + prop_name + '_func'  # set in init in both Py and JS
+    #     # Validate value
+    #     self.__props_being_set[prop_name] = True
+    #     self.__props_ever_set[prop_name] = True
+    #     func = getattr(self, func_name)
+    #     try:
+    #         if this_is_js():
+    #             value2 = func.apply(self, [value])
+    #         elif getattr(self.__class__, prop_name)._has_self:
+    #             value2 = func(self, value)
+    #         else:
+    #             value2 = func(value)
+    #     finally:
+    #         self.__props_being_set[prop_name] = False
+    #     # If not initialized yet, set
+    #     if prop_being_set is None:
+    #         setattr(self, private_name, value2)
+    #         self.emit(prop_name, dict(new_value=value2, old_value=value2))
+    #         return True
+    #     # Otherwise only set if value has changed
+    #     old = getattr(self, private_name)
+    #     if this_is_js():
+    #         is_equal = old == value2
+    #     elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):
+    #         import numpy as np
+    #         is_equal = np.array_equal(old, value2)
+    #     else:
+    #         is_equal = type(old) == type(value2) and old == value2
+    #     if not is_equal:
+    #         setattr(self, private_name, value2)
+    #         self.emit(prop_name, dict(new_value=value2, old_value=old))
+    #         return True
     
     def get_event_types(self):
         """ Get the known event types for this HasEvent object. Returns
@@ -542,9 +540,9 @@ class Component(with_metaclass(ComponentMeta, object)):
             h.reaction('first_name', greet)
         
         """
-        return self.__react(*connection_strings)  # calls Py or JS version
+        return self._reaction(*connection_strings)  # calls Py or JS version
     
-    def __react(self, *connection_strings):
+    def _reaction(self, *connection_strings):
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):
             raise RuntimeError('react() needs one or more connection strings.')

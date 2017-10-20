@@ -13,6 +13,7 @@ event system have the same API and behavior.
 
 """
 
+import re
 import sys
 import json
 
@@ -45,27 +46,13 @@ class LoopJS:
     """
     
     def __init__(self):
-        self._pending_calls = []
-        self._scheduled = False
+        self.reset()
     
-    def call_later(self, func):
-        """ Call the given function in the next iteration of the "event loop".
-        """
-        self._pending_calls.append(func)
-        if not self._scheduled:
-            self._scheduled = True
-            setTimeout(self.iter, 0)
+    def _calllaterfunc(self, func):
+        setTimeout(func, 0)
     
-    def iter(self):
-        """ Do one event loop iteration; process all pending function calls.
-        """
-        self._scheduled = False
-        while len(self._pending_calls):
-            func = self._pending_calls.pop(0)
-            try:
-                func()
-            except Exception as err:
-                console.log(err)
+    def _ensure_thread_match(self):
+        pass  # JS has threads, but worker threads are unlikely to touch this
 
 
 class ReactionJS:
@@ -245,6 +232,11 @@ def _create_js_class(PyClass, JSClass, ignore=()):
     # Almost done
     jscode = '\n'.join(jscode)
     jscode = jscode.replace('new Dict()', '{}').replace('new Dict(', '_pyfunc_dict(')
+    # Optimizations, e.g. remove threading lock context in Loop
+    if PyClass is Loop:
+        p = r"this\._lock\.__enter.+?try {(.+?)} catch.+?exit__.+?}"
+        jscode= re.sub(p, r'{/* with lock */\1}', jscode, 0, re.MULTILINE | re.DOTALL)
+        jscode = jscode.replace('this._ensure_thread_match();', '//this._ensure_thread_match();')
     return jscode
 
 
@@ -252,7 +244,7 @@ IGNORE = ('_integrate_qt', 'integrate_tornado', 'integrate_pyqt4', 'integrate_py
           )
 
 # Generate the code
-JS_Loop = ''#_create_js_class(Loop, LoopJS, IGNORE) + '\nvar loop = new Loop();\n'
+JS_Loop = _create_js_class(Loop, LoopJS, IGNORE) + '\nvar loop = new Loop();\n'
 JS_Reaction = _create_js_class(Reaction, ReactionJS, IGNORE)
 JS_Component = _create_js_class(Component, ComponentJS, IGNORE)
 JS = JS_Loop + JS_Reaction + JS_Component
@@ -395,11 +387,11 @@ if __name__ == '__main__':
             print(self.foo)
     
     print('-' * 80)
-    # print(JS_Loop)
+    print(JS_Loop)
     print('-' * 80)
     # print(JS_Reaction)
     print('-' * 80)
-    print(JS_Component)
+    #print(JS_Component)
     print('-' * 80)
     print(len(JS), 'bytes in total')
     print('-' * 80)

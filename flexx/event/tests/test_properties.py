@@ -12,6 +12,7 @@ loop = event.loop
 def this_is_js():
     return False
 
+instance = event.Component()
 
 class MyObject(event.Component):
     
@@ -23,16 +24,16 @@ class MyObject(event.Component):
     eggs = event.ListProp([], settable=True)
     # todo: good defaults!  eggs2 = event.ListProp()
     eggs3 = event.ListProp([3, 4])
-    
-    # All kinds of props
-    anyprop = event.AnyProp(None, 'can be anything', settable=True)
-    boolprop = event.BoolProp(False, settable=True)
-    intprop = event.IntProp(0, settable=True)
-    floatprop = event.FloatProp(0, settable=True)
-    stringprop = event.StringProp('', settable=True)
-    tupleprop = event.TupleProp((), settable=True)
-    listprop = event.ListProp([], settable=True)
-    componentprop = event.ComponentProp(None, settable=True)  # can be None
+
+    # All kinds of props, defaults
+    anyprop = event.AnyProp(doc='can be anything', settable=True)
+    boolprop = event.BoolProp(settable=True)
+    intprop = event.IntProp(settable=True)
+    floatprop = event.FloatProp(settable=True)
+    stringprop = event.StringProp(settable=True)
+    tupleprop = event.TupleProp(settable=True)
+    listprop = event.ListProp(settable=True)
+    componentprop = event.ComponentProp(settable=True)  # can be None
     # nullprop = event.NullProp(None, settable=True)
     # eitherprop = event.EitherProp(event.IntProp, event.NoneProp)
 
@@ -162,6 +163,41 @@ def test_property_list_mutate():
 
 
 ## All prop types
+
+
+class MyDefaults(event.Component):
+    # Custom defaults
+    anyprop2 = event.AnyProp(7, doc='can be anything')
+    boolprop2 = event.BoolProp(True)
+    intprop2 = event.IntProp(-9)
+    floatprop2 = event.FloatProp(800.45)
+    stringprop2 = event.StringProp('heya')
+    tupleprop2 = event.TupleProp((2, 'xx'))
+    listprop2 = event.ListProp([3, 'yy'])
+    componentprop2 = event.ComponentProp(None)
+
+
+@run_in_both(MyDefaults)
+def test_property_defaults():
+    """
+    7
+    True
+    -9
+    800.45
+    heya
+    [True, 2, 'xx']
+    [3, 'yy']
+    True
+    """
+    m = MyDefaults()
+    print(m.anyprop2)
+    print(m.boolprop2)
+    print(m.intprop2)
+    print(m.floatprop2)
+    print(m.stringprop2)
+    print([isinstance(m.tupleprop2, tuple)] + list(m.tupleprop2))  # grrr
+    print(m.listprop2)
+    print(m.componentprop2 is None)
 
 
 @run_in_both(MyObject)
@@ -327,6 +363,9 @@ def test_property_list():
     ? TypeError
     ? TypeError
     [5, 6]
+    .
+    [1, 2, 3]
+    [1, 2, 3, 5]
     """
     m = MyObject()
     print(m.listprop)
@@ -342,6 +381,18 @@ def test_property_list():
     for value in [3, None, 'asd']:
         m.set_listprop(value)
         loop.iter()
+    print(m.listprop)
+    
+    print('.')
+    # copies are made on set
+    x = [1, 2]
+    m.set_listprop(x)
+    x.append(3)  # this gets in, because copie happens at validation (i.e. mutation)
+    loop.iter()
+    x.append(4)  # this does not
+    loop.iter()
+    print(m.listprop)
+    m.listprop.append(5)  # this is inplace; use tuples where we can
     print(m.listprop)
 
 
@@ -393,12 +444,14 @@ def test_more():
     with raises(TypeError):
         event.AnyProp(doc=3)
     
-    m = MyObject()
+    m1 = MyObject()
+    m2 = MyDefaults()
     
     with raises(AttributeError):
-        m.foo = 3
+        m1.foo = 3
     
-    assert 'anything' in m.__class__.anyprop.__doc__
+    assert 'anything' in m1.__class__.anyprop.__doc__
+    assert 'anything' in m2.__class__.anyprop2.__doc__
 
 
 run_tests_if_main()

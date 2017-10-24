@@ -10,15 +10,23 @@ class Property(BaseDescriptor):
     """ Class descriptor for properties.
     """
     
-    def __init__(self, default=None, doc='', settable=False):
-        if callable(default):
-            raise TypeError('event.prop() is not a decorator (anymore).')
+    _default = None
+    
+    def __init__(self, *args, doc='', settable=False):
+        # Set default
+        if len(args) > 1:
+            raise TypeError('event.Property() accepts at most 1 positional argument.')
+        elif len(args) == 1:
+            self._default = args[0]
+            if callable(self._default):
+                raise TypeError('event.Property() is not a decorator (anymore).')
+        # Set doc
         if not isinstance(doc, str):
-            raise TypeError('event.prop() doc must be a string.')
-        
-        self._default = default
-        self._settable = bool(settable)
+            raise TypeError('event.Property() doc must be a string.')
         self._doc = doc
+        # Set settable
+        self._settable = bool(settable)
+        
         self._set_name('anonymous_property')
     
     def _set_name(self, name):
@@ -57,17 +65,23 @@ class Property(BaseDescriptor):
 
 class AnyProp(Property):
     
+    _default = None
+    
     def _validate(self, value):
         return value
 
 
 class BoolProp(Property):
     
+    _default = False
+    
     def _validate(self, value):
         return bool(value)
 
 
 class IntProp(Property):
+    
+    _default = 0
     
     def _validate(self, value):
         if isinstance(value, (int, float)) or isinstance(value, str):
@@ -79,6 +93,8 @@ class IntProp(Property):
 
 class FloatProp(Property):
     
+    _default = 0.0
+    
     def _validate(self, value):
         if isinstance(value, (int, float)) or isinstance(value, str):
             return float(value)
@@ -89,6 +105,8 @@ class FloatProp(Property):
 
 class StringProp(Property):
     
+    _default = ''
+    
     def _validate(self, value):
         if not isinstance(value, str):
             raise TypeError('%s property cannot accept %s.' %
@@ -97,6 +115,8 @@ class StringProp(Property):
 
 
 class TupleProp(Property):
+    
+    _default = ()
     
     def _validate(self, value):
         if not isinstance(value, (tuple, list)):
@@ -108,6 +128,8 @@ class TupleProp(Property):
 # todo: test in both that initializing a prop gives a new list instance
 class ListProp(Property):
     
+    _default = []
+    
     def _validate(self, value):
         if not isinstance(value, (tuple, list)):
             raise TypeError('%s property cannot accept %s.' %
@@ -116,6 +138,8 @@ class ListProp(Property):
 
 
 class ComponentProp(Property):
+    
+    _default = None
     
     def _validate(self, value):
         if not (value is None or isinstance(value, Component)):

@@ -61,14 +61,6 @@ class AnyProp(Property):
         return value
 
 
-# todo: this is useless unless combined with AnyProp
-class NullProp(Property):
-    
-    def _validate(self, value):
-        if not isinstance(value, None):
-            raise TypeError('Null property can only be None.')
-
-
 class BoolProp(Property):
     
     def _validate(self, value):
@@ -78,13 +70,21 @@ class BoolProp(Property):
 class IntProp(Property):
     
     def _validate(self, value):
-        return int(value)
+        if isinstance(value, (int, float)) or isinstance(value, str):
+            return int(value)
+        else:
+            raise TypeError('%s property cannot accept %s.' %
+                            (self.__class__.__name__, value.__class__.__name__))
 
 
 class FloatProp(Property):
     
     def _validate(self, value):
-        return float(value)
+        if isinstance(value, (int, float)) or isinstance(value, str):
+            return float(value)
+        else:
+            raise TypeError('%s property cannot accept %s.' %
+                            (self.__class__.__name__, value.__class__.__name__))
 
 
 class StringProp(Property):
@@ -115,42 +115,49 @@ class ListProp(Property):
         return list(value)
 
 
-# todo: can I make this work on JS?
-class EitherProp(Property):
-    
-    def __init__(self, *prop_classes, **kwargs):
-        self._sub_classes = prop_classes
-    
-    def _validate(self, value):
-        for cls in self._sub_classes:
-            try:
-                return cls._validate(self, value)
-            except TypeError:
-                pass
-            raise TypeError('This %s property cannot accept %s.' %
-                            (self.__class__.__name__, value.__class__.__name__))
-
 class ComponentProp(Property):
     
     def _validate(self, value):
-        from ._component import Component
         if not (value is None or isinstance(value, Component)):
             raise TypeError('%s property cannot accept %s.' %
                             (self.__class__.__name__, value.__class__.__name__))
         return value
 
 
-## More special
+# todo: For more complex stuff, maybe introduce an EitherProp, e.g. String or None.
+# EiterProp would be nice, like Bokeh has. Though perhaps its already fine if
+# props can be nullable. Note that people can also use AnyProp as a fallback.
+# 
+# class NullProp(Property):
+#     
+#     def _validate(self, value):
+#         if not value is None:
+#             raise TypeError('Null property can only be None.')
+# 
+# class EitherProp(Property):
+#     
+#     def __init__(self, *prop_classes, **kwargs):
+#         self._sub_classes = prop_classes
+#     
+#     def _validate(self, value):
+#         for cls in self._sub_classes:
+#             try:
+#                 return cls._validate(self, value)
+#             except TypeError:
+#                 pass
+#             raise TypeError('This %s property cannot accept %s.' %
+#                             (self.__class__.__name__, value.__class__.__name__))
 
+# todo: more special properties
 # class Auto -> Bokeh has special prop to indicate "automatic" value
-# class Color
+# class Color -> I like this, is quite generic
 # class Date, DateTime
 # class Enum
 # class Either
 # class Instance
-# class Component
 # class Array
 # class MinMax
+
 
 __all__ = []
 for name, cls in list(globals().items()):
@@ -158,3 +165,6 @@ for name, cls in list(globals().items()):
         __all__.append(name)
 
 del name, cls
+
+# Delayed import; deal with circular ref
+from ._component import Component

@@ -329,18 +329,9 @@ def test_property_string():
     print(m.stringprop)
 
 
-# todo: I could also spell this as "(3, 4) || [3, 4]
 @run_in_both(MyObject)
 def test_property_tuple():
     """
-    ()
-    (3, 4)
-    (5, 6)
-    ? TypeError
-    ? TypeError
-    ? TypeError
-    (5, 6)
-    ------------
     []
     [3, 4]
     [5, 6]
@@ -348,22 +339,40 @@ def test_property_tuple():
     ? TypeError
     ? TypeError
     [5, 6]
+    append failed
+    reverse failed
     """
+    # We convert to list when printing, because in JS we cripple the object
+    # and on Node the repr then includes the crippled methods. This way, the
+    # output for Py and JS is also the same. At the bottom we validate that 
+    # the value is indeed ummutable.
     m = MyObject()
-    print(m.tupleprop)
+    print(list(m.tupleprop))
     
     m.set_tupleprop((3, 4))
     loop.iter()
-    print(m.tupleprop)
+    print(list(m.tupleprop))
     
     m.set_tupleprop((5, 6))
     loop.iter()
-    print(m.tupleprop)
+    print(list(m.tupleprop))
     
     for value in [3, None, 'asd']:
         m.set_tupleprop(value)
         loop.iter()
-    print(m.tupleprop)
+    print(list(m.tupleprop))
+    
+    # Cannot append to a tuple
+    try:
+        m.tupleprop.append(9)
+    except Exception:
+        print('append failed')
+    
+    # Cannot reverse a tuple
+    try:
+        m.tupleprop.reverse()
+    except Exception:
+        print('reverse failed')
 
 
 @run_in_both(MyObject)

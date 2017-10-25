@@ -11,11 +11,9 @@ from ._action import ActionDescriptor, Action
 from ._reaction import ReactionDescriptor, Reaction, looks_like_method
 from ._property import Property
 from ._emitter import Emitter
-from ._loop import loop
+from ._loop import loop, this_is_js
 from . import logger
 
-def this_is_js():
-    return False
 
 setTimeout = console = None
 

@@ -2,18 +2,55 @@
 Implements the property decorator, class and desciptor.
 """
 
-from ._loop import loop
+from ._loop import loop, this_is_js
 from ._action import BaseDescriptor
 
+undefined = None 
+
+# todo: allow using this directly
 
 class Property(BaseDescriptor):
-    """ Class descriptor for properties.
+    """ Base property class. Properties are readonly attributes associated
+    with Component classes. Properties can be mutated by actions.
+    The ``Property`` class can have any value, the other property classes
+    validate/convert the value when it is mutated.
+    
+    Usage:
+    
+    .. code-block:: python
+        
+        class MyComponent(event.Component):
+            
+            foo = event.Property(7, doc="A property that can be anything")
+            bar = event.StringProp(doc='A property that can only be string')
+            spam = event.IntProp(8, settable=True)
+    
+    In the above example, one can see how the initial value can be specified.
+    If a omitted, a sensible default value is used. The docstring for the
+    property can be provided using the ``doc`` keyword argument. The ``spam``
+    property is marked as ``settable``; a ``set_spam()`` action is
+    automatically generated.
+    
+    One can also implement custom properties:
+
+    .. code-block:: python
+        
+    class MyCustomProp(event.Property):
+        ''' A property that can only be 'a', 'b' or 'c'. '''
+        
+        _default = 'a'
+        
+        def _validate(self, value):
+            if value not in 'abc':
+                raise TypeError('MyCustomProp value must be "a", "b" or "c".')
+            return value
+    
     """
     
     _default = None
     
     def __init__(self, *args, doc='', settable=False):
-        # Set default
+        # Set initial value
         if len(args) > 1:
             raise TypeError('event.Property() accepts at most 1 positional argument.')
         elif len(args) == 1:
@@ -57,21 +94,17 @@ class Property(BaseDescriptor):
         return setter
     
     def _validate(self, value):
-        raise NotImplementedError('Cannot use Property; '
-                                  'use one of the subclasses instead.')
-
-
-# todo: these need docs!
-
-class AnyProp(Property):
-    
-    _default = None
-    
-    def _validate(self, value):
         return value
 
 
+class AnyProp(Property):
+    """ A property that can be anything (like Property). Default None.
+    """
+
+
 class BoolProp(Property):
+    """ A property who's values are converted to bool. Default False.
+    """
     
     _default = False
     
@@ -80,6 +113,9 @@ class BoolProp(Property):
 
 
 class IntProp(Property):
+    """ A propery who's values are integers. Floats and strings are converted.
+    Default 0.
+    """
     
     _default = 0
     
@@ -92,6 +128,9 @@ class IntProp(Property):
 
 
 class FloatProp(Property):
+    """ A propery who's values are floats. Integers and strings are converted.
+    Default 0.0.
+    """
     
     _default = 0.0
     
@@ -104,6 +143,8 @@ class FloatProp(Property):
 
 
 class StringProp(Property):
+    """ A propery who's values are strings. Default empty string.
+    """
     
     _default = ''
     
@@ -115,6 +156,9 @@ class StringProp(Property):
 
 
 class TupleProp(Property):
+    """ A propery who's values are tuples. In JavaScript the values are Array
+    objects that have some of their methods disabled. Default empty tuple.
+    """
     
     _default = ()
     
@@ -122,11 +166,22 @@ class TupleProp(Property):
         if not isinstance(value, (tuple, list)):
             raise TypeError('%s property cannot accept %s.' %
                             (self.__class__.__name__, value.__class__.__name__))
-        return tuple(value)
+        value = tuple(value)
+        if this_is_js():
+            # Cripple the object so in-place changes are harder. Note that we
+            # cannot prevent setting or deletion of items.
+            value.push = undefined
+            value.splice = undefined
+            value.push = undefined
+            value.reverse = undefined
+            value.sort = undefined
+        return value
 
 
-# todo: test in both that initializing a prop gives a new list instance
 class ListProp(Property):
+    """ A propery who's values are lists. Default empty list. The value is 
+    always copied upon setting, so one can safely provide an initial value.
+    """
     
     _default = []
     
@@ -138,6 +193,8 @@ class ListProp(Property):
 
 
 class ComponentProp(Property):
+    """ A propery who's values are Component instances or None. Default None.
+    """
     
     _default = None
     

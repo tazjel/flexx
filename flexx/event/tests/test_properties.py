@@ -511,6 +511,11 @@ def test_property_not_settable():
 
 def test_property_python_only():
     
+    # Fail multiple positional args
+    with raises(TypeError):
+        class MyObject2(event.Component):
+            foo = event.AnyProp(3, 4)
+    
     # Fail on old syntax
     with raises(TypeError):
         class MyObject2(event.Component):

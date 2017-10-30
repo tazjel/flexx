@@ -66,7 +66,7 @@ var logger = new Logger();
 """
 
 
-class LoopJS:
+class LoopJS:  # pragma: no cover
     """ JS variant of the Loop class.
     """
     
@@ -88,7 +88,7 @@ class LoopJS:
 
 # todo: validate that these get cleaned up ... e.f. the on1 lambda is suspicious
 
-class ReactionJS:
+class ReactionJS:  # pragma: no cover
     """ JS variant of the Reaction class.
     """
     
@@ -103,7 +103,7 @@ class ReactionJS:
         self._init(connection_strings, ob)
 
 
-class ComponentJS:
+class ComponentJS:  # pragma: no cover
     """ JS variant of the Component class.
     """
     
@@ -374,7 +374,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
     
     # Process class items in original order or sorted by name if we cant
     class_items = cls.__dict__.items()
-    if sys.version_info < (3, 6):
+    if sys.version_info < (3, 6):  # pragma: no cover
         class_items = sorted(class_items)
     
     for name, val in class_items:
@@ -431,7 +431,7 @@ def create_js_component_class(cls, cls_name, base_class='Component.prototype'):
             code = code.replace('super()', base_class)  # fix super
             # todo: or define mutators in __create_property?
             if name.startswith('_mutate_') and name[8:] in cls.__properties__:
-                code = code.replace("name", "'%s'" % name[8:])
+                code = code.replace("[name]", "['%s']" % name[8:])
             funcs_code.append(code.rstrip())
             funcs_code.append('')
         elif name in OK_MAGICS:

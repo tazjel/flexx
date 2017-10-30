@@ -253,7 +253,7 @@ class Reaction:
         if self._ob2 is not None:
             if self._ob2() is not None:
                 res = func(self._ob2(), *events)
-            else:
+            else:  # pragma: no cover
                 # We detected that the object that wants the events no longer exist
                 self.dispose()
                 return

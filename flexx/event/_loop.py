@@ -258,7 +258,7 @@ class Loop:
                         for name in component_names[1]:
                             connections.append((component, name))
                     reaction._update_implicit_connections(connections)
-            except Exception as err:
+            except Exception as err:  # pragma: no cover
                 logger.exception(err)
             finally:
                 self._prop_access = {}
@@ -291,7 +291,7 @@ class Loop:
         elif raise_on_fail:  # pragma: no cover
             raise RuntimeError('Could not integrate flexx.event loop')
     
-    def integrate_tornado(self):
+    def integrate_tornado(self):  # pragma: no cover
         """ Integrate with tornado.
         """
         import tornado.ioloop

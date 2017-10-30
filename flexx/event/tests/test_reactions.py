@@ -13,7 +13,10 @@ from flexx.util.logging import capture_log
 from flexx import event
 
 loop = event.loop
+logger = event.logger
 
+
+## Order
 
 class MyObject1(event.Component):
     
@@ -29,8 +32,6 @@ class MyObject1(event.Component):
     def r3(self, *events):
         pass
 
-
-## Order
 
 @run_in_both(MyObject1)
 def test_reaction_order1():
@@ -146,7 +147,8 @@ class MyObject_init(event.Component):
     
     foo = event.IntProp(settable=True)
     bar = event.IntProp(7, settable=True)
-    
+    spam = event.IntProp(settable=False)
+
     @event.reaction('foo', 'bar')
     def _report(self, *events):
         print('r ' + ', '.join(['%s:%i->%i' % (ev.type, ev.old_value, ev.new_value) for ev in events]))
@@ -170,7 +172,7 @@ def test_reacion_init1():
     print('end')
 
 
-@run_in_both(MyObject_init, js=False)  # todo: kwargs
+@run_in_both(MyObject_init)
 def test_reacion_init2():
     """
     0 7
@@ -209,7 +211,7 @@ def test_reacion_init3():
     print('end')
 
 
-@run_in_both(MyObject_init, js=False)  # todo: kwargs
+@run_in_both(MyObject_init)
 def test_reacion_init4():
     """
     0 7
@@ -228,6 +230,23 @@ def test_reacion_init4():
     loop.iter()
     print(m.foo, m.bar)
     print('end')
+
+
+@run_in_both(MyObject_init)
+def test_reacion_init_fail1():
+    """
+    ? AttributeError
+    ? TypeError
+    """
+    try:
+        m = MyObject_init(blabla=1)
+    except AttributeError as err:
+        logger.exception(err)
+    
+    try:
+        m = MyObject_init(spam=1)
+    except TypeError as err:
+        logger.exception(err)
 
 
 ## Meta-ish tests that are similar for property/emitter/action/reaction

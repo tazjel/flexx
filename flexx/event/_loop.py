@@ -155,9 +155,11 @@ class Loop:
             if not self._processing_reaction.is_explicit():
                 if threading.get_ident() == self._last_thread_id:
                     if component._id not in self._prop_access:
-                        self._prop_access[component._id] = component, {prop_name: True}
+                        d = {}
+                        self._prop_access[component._id] = component, d
                     else:
-                        self._prop_access[component._id][1][prop_name] = True
+                        d = self._prop_access[component._id][1]
+                    d[prop_name] = True
 
     ## Queue processing
     

@@ -128,6 +128,11 @@ class ComponentJS:
         for name in self.__actions__:
             self.__create_action(self[name], name)
         
+        # Init emitters
+        for name in self.__emitters__:
+            self.__handlers.setdefault(name, [])
+            self.__create_emitter(self[name], name)
+        
         # Init properties and their default value
         for name in self.__properties__:
             self.__handlers.setdefault(name, [])
@@ -152,11 +157,6 @@ class ComponentJS:
                 raise AttributeError('%s does not have a property %r' %
                                      (self._class_name, name))
         
-        # Init emitters
-        for name in self.__emitters__:
-            self.__handlers.setdefault(name, [])
-            self.__create_emitter(self[name], name)
-        
         # Init handlers and properties now, or later?
         if init_handlers:
             self._init_handlers()
@@ -166,9 +166,10 @@ class ComponentJS:
         # Create (and connect) handlers
         for name in self.__reactions__:
             func = self[name]
-            # todo: func.is_explicit = ...
-            self.__create_reaction(func, name, func._connection_strings)
-            # todo: add_reaction_event for implicit handlers
+            r = self.__create_reaction(func, name, func._connection_strings or ())
+            if not r.is_explicit():
+                ev = dict(source=self, type='', label='')
+                loop.add_reaction_event(r, ev)
     
     def _reaction(self, *connection_strings):
         # The JS version (no decorator functionality)
@@ -219,6 +220,7 @@ class ComponentJS:
     def __create_property(self, name):
         private_name = '_' + name + '_value'
         def getter():
+            loop.register_prop_access(self, name)
             return self[private_name]
         def setter(x):
             raise AttributeError('Cannot set property %r; properties can only '
@@ -250,6 +252,7 @@ class ComponentJS:
         opts = {'enumerable': True, 'configurable': True,  # i.e. overloadable
                 'get': getter, 'set': setter}
         Object.defineProperty(self, name, opts)
+        return reaction
         
     def __create_reaction_object(self, reaction_func, name, connection_strings):
         # Keep ref to the reaction function, see comment in create_action().
@@ -311,6 +314,7 @@ def _create_js_class(PyClass, JSClass, ignore=()):
         p = r"this\._lock\.__enter.+?try {(.+?)} catch.+?else.+?exit__.+?}"
         jscode= re.sub(p, r'{/* with lock */\1}', jscode, 0, re.MULTILINE | re.DOTALL)
         jscode = jscode.replace('this._ensure_thread_', '//this._ensure_thread_')
+        jscode = jscode.replace('threading.get_ident()', '0')
     # Almost done
     jscode = jscode.replace('new Dict()', '{}').replace('new Dict(', '_pyfunc_dict(')
     return jscode
@@ -473,7 +477,7 @@ if __name__ == '__main__':
         def react2foo(self):
             print(self.foo)
     
-    toprint = JS_FUNCS  # or JS_LOOP JS_REACTION JS_COMPONENT JS_EVENT
+    toprint = JS_LOOP  # or JS_LOOP JS_REACTION JS_COMPONENT JS_EVENT
     print('-' * 80)
     print(toprint)  
     print('-' * 80)

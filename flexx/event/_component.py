@@ -78,6 +78,9 @@ def finalize_component_class(cls):
         if name.startswith('__'):
             continue
         val = getattr(cls, name)
+        if isinstance(val, type) and issubclass(val, Property):
+            raise TypeError('Properties should be instantiated, '
+                            'use ``foo = IntProp()`` instead of ``foo = IntProp``.')
         if isinstance(val, ActionDescriptor):
             actions[name] = val
         elif isinstance(val, Property):

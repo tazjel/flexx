@@ -29,7 +29,7 @@ from flexx.event._emitter import EmitterDescriptor
 from flexx.event._component import Component, _mutate_array_js
 
 
-Object = Date = console = setTimeout = undefined = loop = None  # fool pyflake
+Object = Date = console = setTimeout = undefined = loop = logger = None  # fool pyflake
 
 reprs = json.dumps
 
@@ -107,7 +107,7 @@ class ComponentJS:  # pragma: no cover
         self.__props_ever_set = {}
         self.__pending_events = {}
         
-        init_handlers = property_values.pop('_init_handlers', True)
+        init_reactions = property_values.pop('_init_reactions', True)
         
         # Init actions
         for name in self.__actions__:
@@ -142,13 +142,12 @@ class ComponentJS:  # pragma: no cover
                 raise AttributeError('%s does not have a property %r' %
                                      (self._class_name, name))
         
-        # Init handlers and properties now, or later?
-        if init_handlers:
-            self._init_handlers()
+        # Init reactions and properties now, or later?
+        if init_reactions:
+            self._init_reactions()
     
-    # todo: rename handler -> reaction
-    def _init_handlers2(self):
-        # Create (and connect) handlers
+    def _init_reactions2(self):
+        # Create (and connect) reactions
         for name in self.__reactions__:
             func = self[name]
             r = self.__create_reaction(func, name, func._connection_strings or ())
@@ -181,7 +180,7 @@ class ComponentJS:  # pragma: no cover
         # Get function name (Flexx sets __name__ on methods)
         name = func.__name__ or func.name or 'anonymous'
         name = name.split(' ')[-1].split('flx_')[-1]
-        return self.__create_reaction_object(func, name, connection_strings)
+        return self.__create_reaction_ob(func, name, connection_strings)
     
     def __create_action(self, action_func, name):
         # Keep a ref to the action func, which is a class attribute. The object
@@ -229,7 +228,7 @@ class ComponentJS:  # pragma: no cover
         Object.defineProperty(self, name, opts)
     
     def __create_reaction(self, reaction_func, name, connection_strings):
-        reaction = self.__create_reaction_object(reaction_func, name, connection_strings)
+        reaction = self.__create_reaction_ob(reaction_func, name, connection_strings)
         def getter():
             return reaction
         def setter(x):
@@ -239,7 +238,7 @@ class ComponentJS:  # pragma: no cover
         Object.defineProperty(self, name, opts)
         return reaction
         
-    def __create_reaction_object(self, reaction_func, name, connection_strings):
+    def __create_reaction_ob(self, reaction_func, name, connection_strings):
         # Keep ref to the reaction function, see comment in create_action().
         
         # Create function that becomes our "reaction object"

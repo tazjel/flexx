@@ -35,7 +35,7 @@ def reaction(*connection_strings):
 
     To connect functions or methods to an event from another Component
     object, use that object's
-    :func:`Component.connect()<flexx.event.Component.reaction>` method.
+    :func:`Component.reaction() <flexx.event.Component.reaction>` method.
 
     .. code-block:: py
 

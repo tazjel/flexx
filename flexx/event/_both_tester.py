@@ -8,7 +8,7 @@ during tests.
 
 import sys
 
-from ._loop import loop, this_is_js
+from ._loop import loop, this_is_js  # noqa - import from here by tests
 from ._component import Component
 from ._js import create_js_component_class, JS_EVENT
 

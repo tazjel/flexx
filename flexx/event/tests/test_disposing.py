@@ -351,7 +351,7 @@ def test_disposing_method_handler2():
     
     foo = Foo()
     assert foo.get_event_handlers('xx')
-    foo.emit('xx', {})  # <---------
+    foo.emit('xx', {})  # <---
     foo_ref = weakref.ref(foo)
     
     del foo
@@ -445,7 +445,7 @@ def test_disposing_handler4():
     
     loop.iter()
     
-    foo.emit('xx', {})  # <---------
+    foo.emit('xx', {})  # <---
     
     del foo
     gc.collect()

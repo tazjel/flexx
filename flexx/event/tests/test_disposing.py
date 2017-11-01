@@ -323,9 +323,21 @@ def test_disposing_method_handler1():
     foo = Foo()
     assert foo.get_event_handlers('xx')
     foo_ref = weakref.ref(foo)
+    handler_ref = weakref.ref(foo.handle_xx)
     
     del foo
+    
+    # There is still an event in the queue, so cant cleanup now
     gc.collect()
+    gc.collect()
+    assert handler_ref() is not None
+    assert foo_ref() is not None
+    
+    loop.iter()
+    
+    # But we can now
+    gc.collect()
+    assert handler_ref() is None
     assert foo_ref() is None
 
 
@@ -351,7 +363,7 @@ def test_disposing_method_handler2():
     assert foo_ref() is None
 
 
-def test_disposing_method_handler1():
+def test_disposing_method_handler3():
     """ can call dispose with handlers on object. """ 
     
     class Foo(event.Component):

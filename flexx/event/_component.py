@@ -115,43 +115,46 @@ def finalize_component_class(cls):
 
 
 class Component(with_metaclass(ComponentMeta, object)):
-    """ Base class for objects that have properties and can emit events.
-    Initial values of settable properties can be provided by passing them
-    as keyword arguments.
+    """ Base component class.
+    
+    Components have properties, actions that can mutate properties, and
+    reactions that react to changes in properties and to other events.
+    
+    Initial values of properties can be provided by passing them
+    as keyword arguments. This only works if a corresponding ``set_xx()``
+    action is available.
     
     Objects of this class can emit events through their ``emit()``
-    method. Subclasses can use the
-    :func:`prop <flexx.event.prop>` and :func:`readonly <flexx.event.readonly>`
-    decorator to create properties, and the
-    :func:`connect <flexx.event.connect>` decorator to create reactions.
-    Methods named ``on_foo`` are connected to the event "foo".
+    method. Subclasses can use :func:`Property <flexx.event.Property>` to
+    define properties, and the  :func:`action <flexx.event.action>`, 
+    :func:`reaction <flexx.event.reaction>`, and 
+    :func:`emitter <flexx.event.emitter>` decorators to create actions,
+    reactions. and emitters, respectively. 
     
     .. code-block:: python
     
-        class MyObject(event.Component):
+        class MyComponent(event.Component):
             
-            # Emitters
-            
-            @event.prop
-            def foo(self, v=0):
-                return float(v)
+            foo = evene.FloatProp(7, settable=True)
             
             @event.emitter
             def bar(self, v):
                 return dict(value=v)  # the event to emit
             
-            # Reactions
+            @event.action
+            def inrease_foo(self):
+                self._mutate_foo(self.foo + 1)
             
-            @event.connect('foo')
+            @event.reaction('foo')
             def handle_foo(self, *events):
                 print('foo was set to', events[-1].new_value)
             
             @event.connect('bar')
             def on_bar(self, *events):
                 for ev in events:
-                    print('bar event was generated')
+                    print('bar event was emitted')
         
-        ob = MyObject(foo=42)
+        ob = MyComponent(foo=42)
         
         @ob.connect('foo')
         def another_foo handler(*events):
@@ -361,9 +364,6 @@ class Component(with_metaclass(ComponentMeta, object)):
                 loop.add_reaction_event(handler, ev)
         return ev
     
-    # todo: make this public? It can only be called from actions anyway
-    # mmm, but we want to constrain its use to the class itself -> private
-    # this needs to be documented though!
     def _mutate(self, prop_name, value, mutation='set', index=-1):
         """ Main mutator function. Each Component class will also have an
         auto-generated mutator function for each property.
@@ -441,59 +441,6 @@ class Component(with_metaclass(ComponentMeta, object)):
             self.emit(prop_name, ev)
             return True
     
-    # todo: clean up
-    # def _sett_prop(self, prop_name, value, _initial=False):
-    #     """ Set the value of a (readonly) property.
-    #     
-    #     Parameters:
-    #         prop_name (str): the name of the property to set.
-    #         value: the value to set.
-    #     """
-    #     # Checks
-    #     if not isinstance(prop_name, str):
-    #         raise TypeError("_set_prop's first arg must be str, not %s" %
-    #                          prop_name.__class__)
-    #     if prop_name not in self.__properties__:
-    #         cname = self.__class__.__name__
-    #         raise AttributeError('%s object has no property %r' % (cname, prop_name))
-    #     prop_being_set = self.__props_being_set.get(prop_name, None)
-    #     if prop_being_set:
-    #         return
-    #     # Prepare
-    #     private_name = '_' + prop_name + '_value'
-    #     func_name = '_' + prop_name + '_func'  # set in init in both Py and JS
-    #     # Validate value
-    #     self.__props_being_set[prop_name] = True
-    #     self.__props_ever_set[prop_name] = True
-    #     func = getattr(self, func_name)
-    #     try:
-    #         if this_is_js():
-    #             value2 = func.apply(self, [value])
-    #         elif getattr(self.__class__, prop_name)._has_self:
-    #             value2 = func(self, value)
-    #         else:
-    #             value2 = func(value)
-    #     finally:
-    #         self.__props_being_set[prop_name] = False
-    #     # If not initialized yet, set
-    #     if prop_being_set is None:
-    #         setattr(self, private_name, value2)
-    #         self.emit(prop_name, dict(new_value=value2, old_value=value2))
-    #         return True
-    #     # Otherwise only set if value has changed
-    #     old = getattr(self, private_name)
-    #     if this_is_js():
-    #         is_equal = old == value2
-    #     elif hasattr(old, 'dtype') and hasattr(value2, 'dtype'):
-    #         import numpy as np
-    #         is_equal = np.array_equal(old, value2)
-    #     else:
-    #         is_equal = type(old) == type(value2) and old == value2
-    #     if not is_equal:
-    #         setattr(self, private_name, value2)
-    #         self.emit(prop_name, dict(new_value=value2, old_value=old))
-    #         return True
-    
     def get_event_types(self):
         """ Get the known event types for this HasEvent object. Returns
         a list of event type names, for which there is a
@@ -523,7 +470,6 @@ class Component(with_metaclass(ComponentMeta, object)):
         handlers = self.__handlers.get(type, ())
         return [h[1] for h in handlers]
 
-    # This method does *not* get transpiled
     def reaction(self, *connection_strings):
         """ Connect a function to one or more events of this instance. Can
         also be used as a decorator. See the
@@ -547,6 +493,7 @@ class Component(with_metaclass(ComponentMeta, object)):
         """
         return self._reaction(*connection_strings)  # calls Py or JS version
     
+    # todo: remove this indirection?
     def _reaction(self, *connection_strings):
         if (not connection_strings) or (len(connection_strings) == 1 and
                                         callable(connection_strings[0])):

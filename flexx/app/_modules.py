@@ -262,6 +262,7 @@ class JSModule:
             else:
                 # Import from another module
                 # not needed per see; bound via window.flexx.classes
+                # todo: \--> not anymore!
                 self._import(val.__jsmodule__, val.__name__, name)
         
         elif isinstance(val, pyscript_types) and hasattr(val, '__module__'):
@@ -333,11 +334,16 @@ class JSModule:
             raise TypeError('PyScript classes do not (yet) support '
                             'multiple inheritance.')
         if cls is PyComponent or cls is JsComponent:
+            imports = self._deps.setdefault('flexx.event.js', ['flexx.event.js'])
+            self._imported_names.add('Component')
+            for line in ('Component as Component', ):
+                if line not in imports:
+                    imports.append(line)
             return
         for base_cls in cls.__bases__:
             if base_cls is object:
                 break
-            m = self._import(get_mod_name(base_cls), None, None)
+            m = self._import(get_mod_name(base_cls), base_cls.__name__, base_cls.__name__)
             m.add_variable(base_cls.__name__)  # note: m can be self, which is ok
     
     def get_js(self):

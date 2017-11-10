@@ -710,10 +710,7 @@ def _get_page(session, js_assets, css_assets, link, export):
     pre_path = '_assets' if export else '/flexx/assets'
 
     codes = []
-
-    t = 'var flexx = {app_name: "%s", session_id: "%s"};'
-    codes.append('<script>%s</script>\n' % t % (session.app_name, session.id))
-
+    
     for assets in [css_assets, js_assets]:
         for asset in assets:
             if not link:
@@ -727,6 +724,9 @@ def _get_page(session, js_assets, css_assets, link, export):
             if export and assets is js_assets:
                 codes.append('<script>window.flexx.spin();</script>')
         codes.append('')  # whitespace between css and js assets
+    
+    codes.append('<script>flexx.create_session("%s", "%s");</script>\n' %
+                 (session.app_name, session.id))
 
     src = INDEX
     if not link:

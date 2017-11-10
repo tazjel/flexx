@@ -242,31 +242,32 @@ class AppComponentMeta(ComponentMeta):
         # even re-define classes (e.g. in the notebook).
         cls_name = cls.__name__
         base_class = cls.JS.mro()[1]
-        base_class_name = 'flexx.classes.%s.prototype' % base_class.__name__
+        base_class_name = '%s.prototype' % base_class.__name__
         code = []
         
         # Add this class
         c = create_js_component_class(cls.JS, cls_name, base_class_name)
         meta = c.meta
-        code.append(c.replace('var %s =' % cls_name,
-                              'var %s = flexx.classes.%s =' % (cls_name, cls_name),
-                              1))
+        code.append(c)
+        # code.append(c.replace('var %s =' % cls_name,
+        #                       'var %s = flexx.classes.%s =' % (cls_name, cls_name),
+        #                       1))
         
         # Add JS version of Component when this is the Component class
         if base_class is LocalComponent:
-            c = create_js_component_class(LocalComponent, 'LocalComponent', 'flexx.classes.Component.prototype')
+            c = create_js_component_class(LocalComponent, 'LocalComponent', 'Component.prototype')
             # for k in ['vars_unknown', 'vars_global', 'std_functions', 'std_methods']:
                 # meta[k].update(c.meta[k])
-            c = c.replace('var LocalComponent =',
-                          'var LocalComponent = flexx.classes.LocalComponent =', 1)
+            # c = c.replace('var LocalComponent =',
+            #               'var LocalComponent = flexx.classes.LocalComponent =', 1)
             code.insert(0, c)
-            code.insert(0, 'flexx.classes.Component = Component;')
+            # code.insert(0, 'flexx.classes.Component = Component;')
         elif base_class is ProxyComponent:
-            c = create_js_component_class(ProxyComponent, 'ProxyComponent', 'flexx.classes.Component.prototype')
+            c = create_js_component_class(ProxyComponent, 'ProxyComponent', 'Component.prototype')
             for k in ['vars_unknown', 'vars_global', 'std_functions', 'std_methods']:
                 meta[k].update(c.meta[k])
-            c = c.replace('var ProxyComponent =',
-                          'var ProxyComponent = flexx.classes.ProxyComponent =', 1)
+            # c = c.replace('var ProxyComponent =',
+            #               'var ProxyComponent = flexx.classes.ProxyComponent =', 1)
             code.insert(0, c)
         
         # todo: cleanup or restore

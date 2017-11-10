@@ -230,12 +230,12 @@ class AssetStore:
                           for n in JS_EVENT.meta['std_functions']])
         pre2 = ', '.join(['%s%s = _py.%s%s' % (METHOD_PREFIX, n, METHOD_PREFIX, n)
                           for n in JS_EVENT.meta['std_methods']])
-        mod = create_js_module('flexx-event.js',
+        mod = create_js_module('flexx.event.js',
                                'var %s;\nvar %s;\n%s' % (pre1, pre2, JS_EVENT),
                                ['pyscript-std.js as _py'],
                                ['Component', 'loop', 'logger'],
                                'amd-flexx')
-        asset_event = Asset('flexx-event.js', HEADER + mod)
+        asset_event = Asset('flexx.event.js', HEADER + mod)
         
         # Add them
         for a in [asset_reset, asset_loader, asset_pyscript]:

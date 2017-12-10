@@ -11,9 +11,9 @@ Example:
     
     class Example(ui.Widget):
         def init(self):
-            with ui.SplitPanel(orientation='h'):
+            with ui.Split(orientation='h'):
                 ui.Label(text='red', style='background:#f77;')
-                with ui.SplitPanel(orientation='v'):
+                with ui.Split(orientation='v'):
                     ui.Label(text='green', style='background:#7f7;')
                     ui.Label(text='blue', style='background:#77f')
                     ui.Label(text='purple', style='background:#f7f;')
@@ -22,23 +22,27 @@ Example:
 from ... import event
 from ...pyscript import RawJS, window
 from . import Layout
-
+from ._box import OrientationProp
 
 # _phosphor_splitpanel = RawJS("flexx.require('phosphor/lib/ui/splitpanel')")
 
 
-class SplitPanel(Layout):
+class Split(Layout):
     """ Layout to split space for widgets horizontally or vertically.
     
-    The Splitter layout divides the available space among its child
-    widgets in a similar way that Box does, except that the
-    user can divide the space by dragging the divider in between the
-    widgets.
+    This layout splits the available space corresponding to widgets flex
+    values, subject to the constrains of the widgets minimum and maximum
+    sizes (as set via style/CSS).
+    
+    The Box class provides a similar layout, but takes natural size of
+    widgets into account, making it more suited for low-level layout.
+    
+    Also see the VSplit and HSplit convenience classes.
     """
     
     CSS = """
     
-    .flx-SplitPanel > .flx-Widget {
+    .flx-Split > .flx-Widget {
         position: absolute;
     }
     
@@ -60,21 +64,31 @@ class SplitPanel(Layout):
         background: #fff;
     }
     .flx-split-sep:hover {
-        background: #ddd;
-        /*box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);*/
+        /*background: #ddd;*/
+        border: 1px solid rgba(0, 0, 0, 0.3);
     }
     """
     
     _DEFAULT_ORIENTATION = 'h'
     
-    spacing = event.FloatProp(5, settable=True, doc="""
+    spacing = event.FloatProp(8, settable=True, doc="""
         The space between two child elements (in pixels)
         """)
     
-    # todo: implement setter, or implement OrientationProp to share with box
-    orientation = event.StringProp('h', settable=True, doc="""
-        The orientation of the child widgets. 'h' or 'v'. Default horizontal.
+    padding = event.FloatProp(0, settable=True, doc="""
+        The empty space around the layout (in pixels).
         """)
+    
+    orientation = OrientationProp(settable=True, doc="""
+        The orientation of the child widgets. 'h' or 'v' for horizontal and
+        vertical, or their reversed variants 'hr' and 'vr'. Settable with
+        values: 0, 1, 'h', 'v', 'hr', 'vr', 'horizontal', 'vertical',
+        'left-to-right', 'right-to-left', 'top-to-bottom', 'bottom-to-top'.
+        """)
+    
+    def __init__(self, *args, **kwargs):
+        kwargs['orientation'] = kwargs.get('orientation', self._DEFAULT_ORIENTATION)
+        super().__init__(*args, **kwargs)
     
     ## Actions
     
@@ -379,3 +393,15 @@ def _get_max_size(available_size, node):
         y = 1e9
     
     return x, y
+
+
+class HSplit(Split):
+    """ Horizontal Split layout.
+    """
+    _DEFAULT_ORIENTATION = 'h'
+
+
+class VSplit(Split):
+    """ Vertical Split layout.
+    """
+    _DEFAULT_ORIENTATION = 'v'

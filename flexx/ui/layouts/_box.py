@@ -1,17 +1,10 @@
 """
 The box layout classes provide a simple mechanism to horizontally
-or vertically stack child widgets. The ``BoxLayout`` (and ``HBox`` and
+or vertically stack child widgets. The ``Box`` (and ``HBox`` and
 ``VBox``) are intended for laying out leaf content taking into account the
-natural size of the child widgets. The ``BoxPanel`` (and ``HBoxPanel`` and 
-``VBoxPanel``) are intended for higher-level layout. Instead of the "natural"
-size of a widget, the widgets ``base_size`` property is used as the
-"reference" size.
+natural size of the child widgets. 
 
-In chosing between these two kinds of layouts, one could ask oneself whether
-the layout can be replaced by a ``SplitPanel``. If it can, use a ``BoxPanel``.
-
-
-Example for BoxLayout:
+Example for Box layout:
 
 .. UIExample:: 250
     
@@ -19,7 +12,7 @@ Example for BoxLayout:
     
     class Example(ui.Widget):
         def init(self):
-            with ui.BoxLayout(orientation='v'):
+            with ui.VBox:
                 
                 ui.Label(text='Flex 0 0 0')
                 with ui.HBox(flex=0):
@@ -49,7 +42,7 @@ Example for BoxLayout:
                 ui.Label(text='Note the spacer Widget above')
 
 
-A similar example using a BoxPanel:
+A similar example using a Split layout:
 
 .. UIExample:: 250
     
@@ -57,22 +50,22 @@ A similar example using a BoxPanel:
     
     class Example(ui.Widget):
         def init(self):
-            with ui.VBoxPanel():
+            with ui.VSplit():
                 
                 ui.Label(text='Flex 0 0 0', style='')
-                with ui.HBoxPanel(flex=0):
+                with ui.HSplit(flex=0):
                     self.b1 = ui.Button(text='Hola', flex=0)
                     self.b2 = ui.Button(text='Hello world', flex=0)
                     self.b3 = ui.Button(text='Foo bar', flex=0)
                 
                 ui.Label(text='Flex 1 0 3')
-                with ui.HBoxPanel(flex=0):
+                with ui.HSplit(flex=0):
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=0)
                     self.b3 = ui.Button(text='Foo bar', flex=3)
                 
                 ui.Label(text='spacing 10 (inter-widget)')
-                with ui.HBoxPanel(flex=0, spacing=20):
+                with ui.HSplit(flex=0, spacing=20):
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=1)
                     self.b3 = ui.Button(text='Foo bar', flex=1)
@@ -80,7 +73,7 @@ A similar example using a BoxPanel:
                 ui.Widget(flex=1)
 
 
-Interactive BoxLayout example:
+Interactive Box layout example:
 
 .. UIExample:: 200
     
@@ -122,7 +115,7 @@ A classic high level layout:
     
     class Content(ui.Widget):
         def init(self):
-                # Here we use BoxLayout, because we care about natural size
+                # Here we use Box layout, because we care about natural size
                 
                 with ui.HBox():
                     ui.Widget(flex=1)  # spacer
@@ -137,11 +130,11 @@ A classic high level layout:
     class Example(ui.Widget):
     
         def init(self):
-            # Here we use BoxPanel, because we define high-level layout
+            # Here we use Split layout, because we define high-level layout
             
-            with ui.VBoxPanel():
+            with ui.VSplit():
                 SideWidget(text='Header', flex=0, base_size=100)
-                with ui.HBoxPanel(flex=1):
+                with ui.HSplit(flex=1):
                     SideWidget(text='Left', flex=0, base_size=100)
                     Content(flex=1)
                     SideWidget(text='Right', flex=0, base_size=100)
@@ -157,30 +150,14 @@ from . import Layout
 # _phosphor_boxpanel = RawJS("flexx.require('phosphor/lib/ui/boxpanel')")
 
 
-class BaseBoxLayout(Layout):
-    """ Base class for BoxLayout and BoxPanel.
+class OrientationProp(event.Property):
+    """ A property that represents a pair of float values, which can also be
+    set using a scalar.
     """
     
-    def __init__(self, *args, **kwargs):
-        kwargs['orientation'] = kwargs.get('orientation', self._DEFAULT_ORIENTATION)
-        super().__init__(*args, **kwargs)
+    _default = 'h'
     
-    spacing = event.FloatProp(5, settable=True, doc="""
-        The space between two child elements (in pixels)
-        """)
-    
-    orientation = event.StringProp('h', doc="""
-        The orientation of the child widgets. 'h' or 'v'. Default
-        horizontal. The items can also be reversed using 'hr' and 'vr'.
-        """)
-    
-    def set_orientation(self, v=None):
-        """ Set the orientation. Allowed values are: 0, 1,
-        'h', 'v', 'hr', 'vr', 'horizontal', 'vertical',
-        'left-to-right', 'right-to-left', 'top-to-bottom', 'bottom-to-top'.
-        """
-        if v is None:
-            v = self._DEFAULT_ORIENTATION
+    def _validate(self, v):
         if isinstance(v, str):
             v = v.lower().replace('-', '')
         v = {'horizontal': 'h', 0: 'h', 'lefttoright': 'h',
@@ -188,19 +165,23 @@ class BaseBoxLayout(Layout):
              'righttoleft': 'hr', 'bottomtotop': 'vr'}.get(v, v)
         if v not in ('h', 'v', 'hr', 'vr'):
             raise ValueError('%s.orientation got unknown value %r' % (self.id, v))
-        self._mutate_orientation(v)
+        return v
 
 
-class BoxLayout(BaseBoxLayout):
+class Box(Layout):
     """ Layout to distribute space for widgets horizontally or vertically. 
     
     This layout implements CSS flexbox. The reference size of each child
-    widget is based on its natural size (e.g. a button's natural size
-    depends on its text). Further, the minimum and maximum size (set
-    via styling) are taken into account. Extra space is divided
-    according to the flex property of the child widgets.
+    widget is based on its natural size (e.g. a button's text). Each widget
+    gets at least this space (if possible), and the remaining space is 
+    distributed among the widgets corresponding to their flex values. This
+    process is subject to the constrains of the widgets minimum and maximum
+    sizes (as set via style/CSS).
     
-    Also see VBox and HBox for shorthands.
+    The Split class provides a similar layout, but does not take natural size
+    into account and is therefore more suited for high-level layout.
+    
+    Also see the VBox and HBox convenience classes.
     """
     
     _DEFAULT_ORIENTATION = 'h'
@@ -266,18 +247,31 @@ class BoxLayout(BaseBoxLayout):
     
     /* If a boxLayout is in a compound widget, we need to make that widget
        a flex container (done with JS in Widget class), and scale here */
-    .flx-Widget > .flx-BoxLayout {
+    .flx-Widget > .flx-Box {
         flex-grow: 1;
         flex-shrink: 1;
     }
     """
     
-    _DEFAULT_ORIENTATION = 'h'
+    spacing = event.FloatProp(5, settable=True, doc="""
+        The space between two child elements (in pixels)
+        """)
     
-    padding = event.FloatProp(1, doc="""
+    padding = event.FloatProp(1, settable=True, doc="""
         The empty space around the layout (in pixels).
         """)
-
+    
+    orientation = OrientationProp(settable=True, doc="""
+        The orientation of the child widgets. 'h' or 'v' for horizontal and
+        vertical, or their reversed variants 'hr' and 'vr'. Settable with
+        values: 0, 1, 'h', 'v', 'hr', 'vr', 'horizontal', 'vertical',
+        'left-to-right', 'right-to-left', 'top-to-bottom', 'bottom-to-top'.
+        """)
+    
+    def __init__(self, *args, **kwargs):
+        kwargs['orientation'] = kwargs.get('orientation', self._DEFAULT_ORIENTATION)
+        super().__init__(*args, **kwargs)
+    
     @event.reaction('orientation', 'children', 'children*.flex')
     def __set_flexes(self, *events):
         ori = self.orientation
@@ -345,91 +339,13 @@ class BoxLayout(BaseBoxLayout):
             e.style[prefix + sty] = value
 
 
-class HBox(BoxLayout):
-    """ BoxLayout with horizontal layout. Consider using HBoxPanel if
-    you're using this for high-level layout.
+class HBox(Box):
+    """ Horizontal Box layout.
     """
     _DEFAULT_ORIENTATION = 'h'
 
 
-class VBox(BoxLayout):
-    """ BoxLayout with vertical layout. Consider using VBoxPanel if
-    you're using this for high-level layout.
+class VBox(Box):
+    """ Vertical Box layout.
     """
     _DEFAULT_ORIENTATION = 'v'
-
-
-class BoxPanel:#(BaseBoxLayout):
-    """ Layout to distribute space for widgets horizontally or vertically.
-    
-    This layout is implemented using absolute positioning. The reference
-    size of each child widget is based on its ``base_size`` property.
-    When this value is zero, an attempt is made to measure the natural size
-    of the children, but this is not very reliable.
-    Further, the minimum and maximum size (set via styling) are taken
-    into account. Extra space is divided according to the flex property
-    of the child widgets.
-    
-    The BoxPanel differs from the BoxLayout in that the natural size
-    of widgets is *not* taken into account. It is therefore more
-    suited for high-level layout or for child widgets that do not have
-    a natural size.
-    
-    Also see VBoxPanel and HBoxPanel for shorthands.
-    """
-    
-    _DEFAULT_ORIENTATION = 'h'
-
-    def _init_phosphor_and_node(self):
-        self.phosphor = _phosphor_boxpanel.BoxPanel()
-        self.node = self.phosphor.node
-    
-    @event.reaction('orientation', 'children',
-                    'children*.flex', 'children*.base_size')
-    def __set_flexes(self, *events):
-        i = 0 if self.orientation in (0, 'h', 'hr') else 1
-        for widget in self.children:
-            _phosphor_boxpanel.BoxPanel.setStretch(widget.phosphor,
-                                                    widget.flex[i])
-            _phosphor_boxpanel.BoxPanel.setSizeBasis(widget.phosphor,
-                                                        widget.base_size[i])
-    
-    @event.reaction('spacing')
-    def __spacing_changed(self, *events):
-        self.phosphor.spacing = events[-1].new_value
-    
-    @event.reaction('orientation')
-    def __orientation_changed(self, *events):
-        ori = self.orientation
-        if ori == 0 or ori == 'h':
-            self.phosphor.direction = 'left-to-right'
-        elif ori == 1 or ori == 'v':
-            self.phosphor.direction = 'top-to-bottom'
-        elif ori == 'hr':
-            self.phosphor.direction = 'right-to-left'
-        elif ori == 'vr':
-            self.phosphor.direction = 'bottom-to-top'
-        else:
-            raise ValueError('Invalid boxpanel orientation: ' + ori)
-
-
-class HBoxPanel(BoxPanel):
-    """ BoxPanel with horizontal layout. Consider using HBox if you're using
-    this for low-level layout and the children have a "natural" size.
-    """
-    
-    _DEFAULT_ORIENTATION = 'h'
-    
-    class JS:
-        _DEFAULT_ORIENTATION = 'h'
-
-
-class VBoxPanel(BoxPanel):
-    """ BoxPanel with vertical layout. Consider using VBox if you're using
-    this for low-level layout and the children have a "natural" size.
-    """
-    
-    _DEFAULT_ORIENTATION = 'v'
-    
-    class JS:
-        _DEFAULT_ORIENTATION = 'v'

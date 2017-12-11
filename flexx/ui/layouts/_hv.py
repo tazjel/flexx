@@ -1,18 +1,17 @@
 """
-The box layout classes provide a simple mechanism to horizontally
-or vertically stack child widgets. The ``Box`` (and ``HBox`` and
-``VBox``) are intended for laying out leaf content taking into account the
-natural size of the child widgets. 
+The HVLayout and its subclasses provide a simple mechanism to horizontally
+or vertically stack child widgets.
 
-Example for Box layout:
 
 .. UIExample:: 250
     
     from flexx import ui
     
     class Example(ui.Widget):
+    
         def init(self):
-            with ui.VBox:
+            
+            with ui.VBox():
                 
                 ui.Label(text='Flex 0 0 0')
                 with ui.HBox(flex=0):
@@ -26,14 +25,14 @@ Example for Box layout:
                     self.b2 = ui.Button(text='Hello world', flex=0)
                     self.b3 = ui.Button(text='Foo bar', flex=3)
                 
-                ui.Label(text='padding 10 (around layout)')
-                with ui.HBox(flex=0, padding=10):
+                ui.Label(text='padding 15 (around layout)')
+                with ui.HBox(flex=0, padding=15):
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=1)
                     self.b3 = ui.Button(text='Foo bar', flex=1)
                 
-                ui.Label(text='spacing 10 (inter-widget)')
-                with ui.HBox(flex=0, spacing=10):
+                ui.Label(text='spacing 15 (inter-widget)')
+                with ui.HBox(flex=0, spacing=15):
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=1)
                     self.b3 = ui.Button(text='Foo bar', flex=1)
@@ -42,7 +41,7 @@ Example for Box layout:
                 ui.Label(text='Note the spacer Widget above')
 
 
-A similar example using a Split layout:
+A similar example using a Split / Fix layout:
 
 .. UIExample:: 250
     
@@ -53,19 +52,19 @@ A similar example using a Split layout:
             with ui.VSplit():
                 
                 ui.Label(text='Flex 0 0 0', style='')
-                with ui.HSplit(flex=0):
+                with ui.HFix(flex=0):
                     self.b1 = ui.Button(text='Hola', flex=0)
                     self.b2 = ui.Button(text='Hello world', flex=0)
                     self.b3 = ui.Button(text='Foo bar', flex=0)
                 
                 ui.Label(text='Flex 1 0 3')
-                with ui.HSplit(flex=0):
+                with ui.HFix(flex=0):
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=0)
                     self.b3 = ui.Button(text='Foo bar', flex=3)
                 
                 ui.Label(text='spacing 10 (inter-widget)')
-                with ui.HSplit(flex=0, spacing=20):
+                with ui.HFix(flex=0, spacing=20):
                     self.b1 = ui.Button(text='Hola', flex=1)
                     self.b2 = ui.Button(text='Hello world', flex=1)
                     self.b3 = ui.Button(text='Foo bar', flex=1)
@@ -171,17 +170,28 @@ class OrientationProp(event.Property):
 class HVLayout(Layout):
     """ Layout to distribute space for widgets horizontally or vertically. 
     
-    This layout implements CSS flexbox. The reference size of each child
-    widget is based on its natural size (e.g. a button's text). Each widget
-    gets at least this space (if possible), and the remaining space is 
-    distributed among the widgets corresponding to their flex values. This
-    process is subject to the constrains of the widgets minimum and maximum
-    sizes (as set via style/CSS).
+    This is a versatile layout class which can operate in different
+    orientations (horizontal, vertical, reversed), and in different modes:
     
-    The Split class provides a similar layout, but does not take natural size
-    into account and is therefore more suited for high-level layout.
+    In 'fix' mode, all available space is simply distributed corresponding
+    to the children's flex values. This can be convenient to e.g. split
+    a layout in two halves.
     
-    Also see the VBox and HBox convenience classes.
+    In 'box' mode, each widget gets at least its natural size (if available),
+    and any *additional* space is distributed corresponding to the children's
+    flex values. This is convenient for low-level layout of widgets, e.g. to
+    align  one or more buttons. It is common to use an empty ``Widget`` with a
+    flex of 1 to fill up any remaining space. This mode is based on CSS flexbox.
+    
+    In 'split' mode, all available space is initially distributed corresponding
+    to the children's flex values. The splitters between the child widgets
+    can be dragged by the user, and positioned via an action. This is useful
+    to give the user more control over the (high-level) layout.
+    
+    In all modes, the layout is constrained by the minimum and maximum size
+    of the child widgets (as set via style/CSS).
+    
+    Also see the convenience classes: HFix, VFix, HBox, VBox, HSplit, VSplit.
     """
     
     _DEFAULT_ORIENTATION = 'h'
@@ -191,7 +201,7 @@ class HVLayout(Layout):
     
     /* === for box layout === */
     
-    .flx-hbox, .flx-vbox, .flx-hboxr, .flx-vboxr {
+    .flx-box {
         display: -webkit-flex;
         display: -ms-flexbox;  /* IE 10 */
         display: -ms-flex;     /* IE 11 */
@@ -213,45 +223,46 @@ class HVLayout(Layout):
         align-items: stretch;
     }
     
-    .flx-hbox {
-        -webkit-flex-flow: row; -ms-flex-flow: row; -moz-flex-flow: row; flex-flow: row;
+    .flx-box.flx-horizontal {
+        -webkit-flex-flow: row;
+        -ms-flex-flow: row;
+        -moz-flex-flow: row;
+        flex-flow: row;
         width: 100%;
     }
-    .flx-vbox {
+    .flx-box.flx-vertical {
         -webkit-flex-flow: column;
         -ms-flex-flow: column;
         -moz-flex-flow: column;
         flex-flow: column;
         height: 100%; width: 100%;
     }
-    .flx-hboxr {
+    .flx-box.flx-horizontal.flx-reversed {
         -webkit-flex-flow: row-reverse;
         -ms-flex-flow: row-reverse;
         -moz-flex-flow: row-reverse;
         flex-flow: row-reverse;
-        width: 100%;
     }
-    .flx-vboxr {
+    .flx-box.flx-vertical.flx-reversed {
         -webkit-flex-flow: column-reverse;
         -ms-flex-flow: column-reverse;
         -moz-flex-flow: column-reverse;
         flex-flow: column-reverse;
-        height: 100%; width: 100%;
     }
     
     /* Make child widgets (and layouts) size correctly */
-    .flx-hbox > .flx-Widget, .flx-hboxr > .flx-Widget {
+    .flx-box.flx-horizontal > .flx-Widget {
         height: auto;
         width: auto;
     }
-    .flx-vbox > .flx-Widget, .flx-vboxr > .flx-Widget {
+    .flx-box.flx-vertical > .flx-Widget {
         width: auto;
         height: auto;
     }
     
     /* If a boxLayout is in a compound widget, we need to make that widget
        a flex container (done with JS in Widget class), and scale here */
-    .flx-Widget > .flx-hbox, .flx-Widget > .flx-vbox, .flx-Widget > .flx-hboxr, .flx-Widget > .flx-vboxr {
+    .flx-Widget > .flx-box {
         flex-grow: 1;
         flex-shrink: 1;
     }
@@ -262,10 +273,10 @@ class HVLayout(Layout):
         position: absolute;
     }
     
-    .flx-split-sep.flx-horizontal {
+    .flx-split.flx-horizontal > .flx-split-sep {
         cursor: ew-resize;  
     }
-    .flx-split-sep.flx-vertical {
+    .flx-split.flx-vertical > .flx-split-sep {
         cursor: ns-resize;
     }
     .flx-split-sep {
@@ -277,32 +288,30 @@ class HVLayout(Layout):
         user-select: none;
         box-sizing: border-box;
         /*background: rgba(0, 0, 0, 0);*/
-        background: #fff;
-    }
-    .flx-split-sep:hover {
-        /*background: #ddd;*/
-        border: 1px solid rgba(0, 0, 0, 0.3);
+        background: #fff;  /* hide underlying widgets */
     }
     """
     
     mode = event.StringProp('box', settable=True, doc="""
         The mode in which this layout operates:
-        * fix: all available space is distributed corresponding to flex values.
+        
+        * fix: all available space is distributed corresponding to the flex values.
         * box: each widget gets at least its natural size, and additional space
-          is distributed corresponding to flex values.
-        * split: available space is initially distributed correspondong to flex
-          values, and can be modified by the user by dragging the splitters.
+          is distributed corresponding to the flex values.
+        * split: available space is initially distributed correspondong to the
+          flex values, and can be modified by the user by dragging the splitters.
         """)
     
     orientation = OrientationProp(settable=True, doc="""
         The orientation of the child widgets. 'h' or 'v' for horizontal and
         vertical, or their reversed variants 'hr' and 'vr'. Settable with
         values: 0, 1, 'h', 'v', 'hr', 'vr', 'horizontal', 'vertical',
-        'left-to-right', 'right-to-left', 'top-to-bottom', 'bottom-to-top'.
+        'left-to-right', 'right-to-left', 'top-to-bottom', 'bottom-to-top'
+        (insensitive to case and use of dashes).
         """)
     
-    spacing = event.FloatProp(5, settable=True, doc="""
-        The space between two child elements (in pixels)
+    spacing = event.FloatProp(4, settable=True, doc="""
+        The space between two child elements (in pixels).
         """)
     
     padding = event.FloatProp(1, settable=True, doc="""
@@ -317,6 +326,9 @@ class HVLayout(Layout):
         self._dragging = None
         
         super().__init__(*args, **kwargs)
+        
+        if 'Split' in self._id and 'spacing' not in kwargs:
+            self.set_spacing(8)
     
     ## Actions
     
@@ -351,9 +363,8 @@ class HVLayout(Layout):
             abs_pos = max(0, min(1, pos)) * available_size  # Make absolute
             positions.append(abs_pos)
         
-        # Apply (we want to be able to call this in fix-mode
-        # self.set_divider_positions(*positions)
-        self._set_absolute_divider_positions(*positions)
+        # Apply (we want to be able to call this in fix-mode)
+        self.emit('_rerender', dict(positions=positions))
     
     @event.action
     def set_divider_positions(self, *positions):
@@ -364,9 +375,8 @@ class HVLayout(Layout):
             return
         
         total_size, available_size = self._get_available_size()
-        
         positions = [max(0, min(1, pos)) * available_size for pos in positions]
-        self._set_absolute_divider_positions(*positions)
+        self.emit('_rerender', dict(positions=positions))
     
     ## General reactions and hooks
     
@@ -376,17 +386,38 @@ class HVLayout(Layout):
         
         if self.mode == 'box':
             self.outernode.classList.remove('flx-split')
-            self._set_box_style_class()
+            self.outernode.classList.add('flx-box')
             self._set_box_child_flexes()
             self._set_box_spacing()
-            self._set_box_padding()
         else:
-            self.outernode.classList.remove('flx-hbox')
-            self.outernode.classList.remove('flx-vbox')
-            self.outernode.classList.remove('flx-hboxr')
-            self.outernode.classList.remove('flx-vboxr')
+            self.outernode.classList.remove('flx-box')
             self.outernode.classList.add('flx-split')
             self.set_from_flex_values()
+    
+    @event.reaction('orientation')
+    def __set_orientation(self, *events):
+        ori = self.orientation
+        if 'h' in ori:
+            self.outernode.classList.add('flx-horizontal')
+            self.outernode.classList.remove('flx-vertical')
+        else:
+            self.outernode.classList.remove('flx-horizontal')
+            self.outernode.classList.add('flx-vertical')
+        if 'r' in ori:
+            self.outernode.classList.add('flx-reversed')
+        else:
+            self.outernode.classList.remove('flx-reversed')
+        
+        for widget in self.children:
+            widget.check_real_size()
+        self._split_rerender()
+    
+    @event.reaction('padding')
+    def __set_padding(self, *events):
+        self.outernode.style['padding'] = self.padding + 'px'
+        for widget in self.children:
+            widget.check_real_size()
+        self._split_rerender()
     
     def _update_layout(self, old_children, new_children=None):
         """ Can be overloaded in (Layout) subclasses.
@@ -420,38 +451,17 @@ class HVLayout(Layout):
         n = max(0, n)
         to_remove = self._seps[n:]
         self._seps = self._seps[:n]
-        hv = 'flx-horizontal' if 'h' in self.orientation else 'flx-vertical'
+        # hv = 'flx-horizontal' if 'h' in self.orientation else 'flx-vertical'
         while len(self._seps) < n:
             sep = window.document.createElement('div')
             self._seps.append(sep)
             sep.i = len(self._seps) - 1
             sep.classList.add('flx-split-sep')
-            sep.classList.add(hv)
+            # sep.classList.add(hv)
             sep.rel_pos = 0
             sep.abs_pos = 0
     
     ## Reactions for box mode
-    
-    @event.reaction('orientation')
-    def _set_box_style_class(self, *events):
-        if self.mode != 'box':
-            return
-        ori = self.orientation
-        for name in ('hbox', 'vbox', 'hboxr', 'vboxr'):
-            self.outernode.classList.remove('flx-'+name)
-        # todo: class names such that we can just compose name 'flx-' + self.orientation + 'box'
-        if ori == 'h':
-            self.outernode.classList.add('flx-hbox')
-        elif ori == 'v':
-            self.outernode.classList.add('flx-vbox')
-        elif ori == 'hr':
-            self.outernode.classList.add('flx-hboxr')
-        elif ori == 'vr':
-            self.outernode.classList.add('flx-vboxr')
-        else:
-            raise ValueError('Invalid box orientation: ' + ori)
-        for widget in self.children:
-            widget.check_real_size()
     
     @event.reaction('orientation', 'children', 'children*.flex')
     def _set_box_child_flexes(self, *events):
@@ -494,14 +504,6 @@ class HVLayout(Layout):
         for widget in children:
             widget.check_real_size()
     
-    @event.reaction('padding')
-    def _set_box_padding(self, *events):
-        if self.mode != 'box':
-            return
-        self.outernode.style['padding'] = self.padding + 'px'
-        for widget in self.children:
-            widget.check_real_size()
-
     ## Reactions and machinerey for fix/split mode
     
     def _get_available_size(self):
@@ -513,34 +515,31 @@ class HVLayout(Layout):
             total_size = self.outernode.clientHeight
         return total_size, total_size - bar_size * len(self._seps) - 2 * pad_size
     
-    @event.reaction('spacing', 'padding')
+    @event.reaction('spacing')
     def __spacing_changed(self, *events):
-        self._split_rerender()
-    
-    @event.reaction('orientation')
-    def _set_split_class_name(self, *events):
-        if 'h' in self.orientation:
-            for sep in self._seps:
-                sep.classList.remove('flx-vertical')
-                sep.classList.add('flx-horizontal')
-        else:
-            for sep in self._seps:
-                sep.classList.remove('flx-horizontal')
-                sep.classList.add('flx-vertical')
         self._split_rerender()
     
     @event.reaction('children', 'children*.flex')
     def _set_split_from_flexes(self, *events):
-        self.set_from_flex_values()
+        if self.mode != 'box':
+            self.set_from_flex_values()
     
     def _split_rerender(self):
         """ Rerender, keeping the relative positions equal.
         """
+        if self.mode == 'box':
+            return
         total_size, available_size = self._get_available_size()
         positions = [sep.rel_pos * available_size for sep in self._seps]
-        self._set_absolute_divider_positions(*positions)
+        self.emit('_rerender', dict(positions=positions))
     
-    def _set_absolute_divider_positions(self, *positions):
+    @event.reaction('!_rerender')
+    def __rerender(self, *events):
+        """ Set the slider positions, subject to constraints.
+        """
+        if self.mode == 'box':
+            return
+        positions = events[-1].positions  # absolute positions
         children = self.children
         bar_size = self.spacing
         pad_size = self.padding
@@ -664,10 +663,14 @@ class HVLayout(Layout):
                 positions = [None for i in range(len(self._seps))]
                 diff = (x_or_y1 - x_or_y2) if 'r' in ori else (x_or_y2 - x_or_y1)
                 positions[i] = max(0, ref_pos + diff)
-                self._set_absolute_divider_positions(*positions)
+                self._seps[i].style['left' if 'h' in ori else 'top'] =( x_or_y2- 4) + 'px'
+                self.emit('_rerender', dict(positions=positions))  # collect rerenders
+                # self.__rerender(dict(positions=positions))  # more direct
         else:
             return super().mouse_move(e)
 
+
+## Util funcs
 
 def _applyBoxStyle(e, sty, value):
     for prefix in ['-webkit-', '-ms-', '-moz-', '']:
@@ -739,43 +742,53 @@ def _get_max_size(available_size, node):
     return x, y
 
 
+## Convenience subclasses
+
 class HBox(HVLayout):
-    """ Horizontal Box layout.
+    """ Horizontal layout that tries to give each widget its natural size and
+    distributes any remaining space corresponding to the widget's flex values.
     """
     _DEFAULT_ORIENTATION = 'h'
     _DEFAULT_MODE = 'box'
 
 
 class VBox(HVLayout):
-    """ Vertical Box layout.
+    """ Vertical layout that tries to give each widget its natural size and
+    distributes any remaining space corresponding to the widget's flex values.
     """
     _DEFAULT_ORIENTATION = 'v'
     _DEFAULT_MODE = 'box'
 
 
 class HFix(HVLayout):
-    """ Horizontal Fix layout.
+    """ Horizontal layout that distributes the available space corresponding
+    to the widget's flex values.
     """
     _DEFAULT_ORIENTATION = 'h'
     _DEFAULT_MODE = 'fix'
 
 
 class VFix(HVLayout):
-    """ Vertical Fix layout.
+    """ Vertical layout that distributes the available space corresponding
+    to the widget's flex values.
     """
     _DEFAULT_ORIENTATION = 'v'
     _DEFAULT_MODE = 'fix'
 
 
 class HSplit(HVLayout):
-    """ Horizontal Split layout.
+    """ Horizontal layout that initially distributes the available space
+    corresponding to the widget's flex values, and has draggable splitters.
+    By default, this layout has a slightly larger spacing between the widgets.
     """
     _DEFAULT_ORIENTATION = 'h'
     _DEFAULT_MODE = 'split'
 
 
 class VSplit(HVLayout):
-    """ Vertical Split layout.
+    """ Vertical layout that initially distributes the available space
+    corresponding to the widget's flex values, and has draggable splitters.
+    By default, this layout has a slightly larger spacing between the widgets.
     """
     _DEFAULT_ORIENTATION = 'v'
     _DEFAULT_MODE = 'split'

@@ -172,9 +172,10 @@ class Widget(app.JsComponent):
         # Allow initial styling via property-like mechanism
         style = kwargs.pop('style', '')
         
-        # todo: it seems like we can get rid of this is_app thing
-        # if kwargs.get('is_app', False):
-        #     kwargs['container'] = 'body'
+        # Whether this was the component that represents the app.
+        # We use window.flexx.need_main_widget for a similar purpose,
+        # but we might use it in the future.
+        is_app = kwargs.get('flx_is_app', False)  # noqa
         
         # Init this component (e.g. create properties and actions)
         super().__init__(*init_args, **kwargs)
@@ -345,7 +346,8 @@ class Widget(app.JsComponent):
         
         return node
     
-    # todo: mmm, need this at the Python side
+    # Note that this method is only present at the Python side
+    # (because the # JsComponent meta class makes it so).
     def _repr_html_(self):
         """ This is to get the widget shown inline in the notebook.
         """

@@ -142,7 +142,6 @@ class ToggleButton(BaseButton):
 
     @event.reaction('mouse_click')
     def __toggle_checked(self, *events):
-        # todo: or invoke self.toggle()?
         self.set_checked(not self.checked)
 
     @event.reaction('checked')

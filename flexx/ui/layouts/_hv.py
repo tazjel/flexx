@@ -351,8 +351,8 @@ class HVLayout(Layout):
         The empty space around the layout (in pixels).
         """)
     
-    # todo: would love to make this local/no-sync
-    splitter_positions = event.TupleProp(doc="""
+    # splitter_positions = event.TupleProp(doc="""  xx local property!
+    splitter_positions = event.LocalProperty(doc="""
         The preferred relative positions of the splitters. The actual positions
         are subject to min-max constraints (and natural sizes for box-mode).
         """) 
@@ -417,7 +417,7 @@ class HVLayout(Layout):
         """ Set relative splitter posisions (None or values between 0 and 1).
         Only usable in split-mode.
         """
-        # todo: technically, we could allow this in fix-mode too
+        # todo: technically, we could allow this in fix-mode too, but *should* we?
         if self.mode != 'split':
             return
         

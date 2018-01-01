@@ -117,21 +117,6 @@ class Widget(app.JsComponent):
         the minimum size. Flex is a two-element tuple, but both values
         can be specified at once by specifying a scalar.
         """)
-    # todo: make a custom 2Tuple prop to allow specifying as scalar, also pos and size etc
-    
-    # todo: PinBoardLayout and GridPanel or not used a lot, deprecate?
-    pos = event.FloatPairProp((0, 0), settable=True, doc="""
-        The position of the widget when it is in a layout that allows
-        positioning, this can be an arbitrary position (e.g. in
-        PinBoardLayout) or the selection of column and row in a
-        GridPanel.
-        """)
-    
-    base_size = event.FloatPairProp((32, 32), settable=True, doc="""
-        The given size of the widget when it is in a layout that
-        allows explicit sizing, or the base-size in a BoxPanel or
-        GridPanel.
-        """)
     
     size = event.FloatPairProp((0, 0), settable=False, doc="""
         The actual size of the widget. Flexx tries to keep this value
@@ -144,12 +129,10 @@ class Widget(app.JsComponent):
         derived from the element's style, in pixels.
         """)
     
-    # todo: turn this into an intProp None->-2?
-    # Also see size readonly defined in JS
-    tabindex = event.AnyProp(None, settable=True, doc="""
+    tabindex = event.AnyProp(None, settable=False, doc="""
         The index used to determine widget order when the user
         iterates through the widgets using tab. This also determines
-        if a widget is able to receive key events. Flexx automatically
+        whether a widget is able to receive key events. Flexx automatically
         sets this property when it should emit key events.
         Effect of possible values on underlying DOM element:
         
@@ -161,6 +144,14 @@ class Widget(app.JsComponent):
         * 1 and up: element can have focus, and the tab-order is determined
             by the value of tabindex.
         """)
+    
+    def set_tabindex(self, value):
+        """ Setter for tabindex.
+        """
+        if value is None or isinstance(value, int):
+            self._mutate('tabindex', value)
+        else:
+            raise TypeError('Tabindex must be None or int.')
     
     ## Methods
     
@@ -178,7 +169,7 @@ class Widget(app.JsComponent):
         if parent is not None and not kwargs.get('flx_session', None):
             kwargs['flx_session'] = parent.session
         
-        # todo: document this
+        # Allow initial styling via property-like mechanism
         style = kwargs.pop('style', '')
         
         # todo: it seems like we can get rid of this is_app thing
@@ -382,14 +373,6 @@ class Widget(app.JsComponent):
         self.set_parent(None)
         self._children_value = ()
     
-    # @event.connect('parent:aaa')
-    # def __keep_alive(self, *events):
-    #     # When the parent changes, we prevent the widget from being deleted
-    #     # for a few seconds, to it will survive parent-children "jitter".
-    #     self._session.keep_alive(self)
-    # todo: not necessary because we keep_alive when a Component is send over, or is that too heavy?
-    
-    
     ## Actions
     
     
@@ -398,6 +381,9 @@ class Widget(app.JsComponent):
         """ Apply CSS style to this widget object. e.g.
         ``"background: #f00; color: #0f0;"``. If the given value is a
         dict, its key-value pairs are converted to a CSS style string.
+        
+        Initial styling can also be given in a property-like fashion:
+        ``MyWidget(style='background:red;')``
         
         For static styling it is often better to define a CSS class attribute
         and/or use ``css_class``.
@@ -641,16 +627,9 @@ class Widget(app.JsComponent):
     # todo: events: focus, enter, leave ... ?
     
     # todo: document this hook-like class attribute
+    # todo: also seems like capturing is always on? (move always works)
     CAPTURE_MOUSE = False
     
-    # def _new_event_type_hook(self, event_type):
-    #     # In order to receive JS key events, we need a tabindex.
-    #     if self.tabindex is None:
-    #         if event_type in ('key_down', 'key_up', 'key_press'):
-    #             self.tabindex = -1
-    #     super()._new_event_type_hook(event_type)
-    
-    # todo: verify that the below correctly replaces the above
     def _registered_reactions_hook(self):
         event_types = super()._registered_reactions_hook()
         if self.tabindex is None:

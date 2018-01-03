@@ -157,7 +157,7 @@ More reading:
 
 """
 
-from ... import event
+from ... import event, app
 from ...pyscript import RawJS
 from . import Layout
 
@@ -352,7 +352,7 @@ class HVLayout(Layout):
         """)
     
     # splitter_positions = event.TupleProp(doc="""  xx local property!
-    splitter_positions = event.LocalProperty(doc="""
+    splitter_positions = app.LocalProperty(doc="""
         The preferred relative positions of the splitters. The actual positions
         are subject to min-max constraints (and natural sizes for box-mode).
         """) 
